@@ -2,4 +2,4 @@ dependencies
 
 db/
 log/
-test/
+test/test_half_open_connection.rb

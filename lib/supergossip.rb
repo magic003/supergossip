@@ -1,6 +1,5 @@
-$:.unshift(File.dirname(__FILE__)) unless
-  $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
+require File.dirname(__FILE__)+'/supergossip/version'
+require File.dirname(__FILE__)+'/supergossip/config/config'
+require File.dirname(__FILE__)+'/supergossip/dao/user_dao'
+require File.dirname(__FILE__)+'/supergossip/model/user'
 
-module SuperGossip
-  VERSION = '0.0.1'
-end
