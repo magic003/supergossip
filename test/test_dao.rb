@@ -35,7 +35,7 @@ class TestDAO < Test::Unit::TestCase
 
         userDAO = DAO::UserDAO.new(@db)
         user = Model::User.new
-        user.guid = 'aw94312d'
+        user.guid = UUID.create_random.to_s
         user.name = 'test'
         user.password = 'testpswd'
         userDAO.add(user)
