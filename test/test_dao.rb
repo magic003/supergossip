@@ -35,9 +35,9 @@ class TestDAO < Test::Unit::TestCase
 
         userDAO = DAO::UserDAO.new(@db)
         user = Model::User.new
-        user.guid = UUID.create_random.to_s
         user.name = 'test'
         user.password = 'testpswd'
+        user.guid = UUID.user_id(user.name).to_s_compact
         userDAO.add(user)
 
         @db.execute(sql) do |row|
