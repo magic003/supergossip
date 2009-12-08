@@ -1,6 +1,5 @@
-require 'test/unit'
 require 'sqlite3'
-require File.dirname(__FILE__) + '/../lib/supergossip'
+require 'test_helper'
 
 # This test case tests data access object functions 
 class TestDAO < Test::Unit::TestCase
