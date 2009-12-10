@@ -19,5 +19,11 @@ module SuperGossip ; module DAO
                     % [user.guid,user.name,user.password]
             @db.execute(sql)
         end
+
+        # Delete all users from the database
+        def self.delete(db)
+            sql = 'DELETE FROM user;'
+            db.execute(sql)
+        end
     end
 end; end
