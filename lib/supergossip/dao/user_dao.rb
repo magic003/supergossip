@@ -4,7 +4,7 @@ module SuperGossip ; module DAO
     # 
     # Code snippet:
     #
-    #   db = SQLite2::Database.new("data.db")
+    #   db = SQLite3::Database.new("data.db")
     #   userDAO = UserDAO.new(db)
     #   ...
     #   db.close
