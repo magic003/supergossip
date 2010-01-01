@@ -2,7 +2,8 @@ require 'singleton'
 require 'yaml'
 
 module SuperGossip ; module Config
-    # This class holds the configuration parameters of the system. It's implemented with Singleton pattern, and works like a hash table.
+    # This class holds the configuration parameters of the system. 
+    # It's implemented with Singleton pattern, and works like a hash table.
     class Config
         include Singleton
 

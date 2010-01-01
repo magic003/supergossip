@@ -16,13 +16,17 @@ INSERT INTO routing VALUES(1.0,1.0,1.0,1.0,0);
 
 DROP TABLE IF EXISTS supernode_cache;
 CREATE TABLE supernode_cache (
-    guid        TEXT PRIMARY KEY NOT NULL,
-    authority   REAL,
-    hub         REAL,
-    score_a     REAL,
-    score_h     REAL,
-    latency     INTEGER,
-    last_update TEXT DEFAULT (datetime('now'))
+    guid            TEXT PRIMARY KEY NOT NULL,
+    authority       REAL,
+    hub             REAL,
+    score_a         REAL,
+    score_h         REAL,
+    latency         REAL,
+    last_update     TEXT DEFAULT (datetime('now')),
+    public_ip       TEXT,
+    public_port     INTEGER,
+    private_ip      TEXT,
+    private_port    INTEGER
 );
 
 DROP TABLE IF EXISTS neighbors;

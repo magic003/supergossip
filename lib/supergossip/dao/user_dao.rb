@@ -1,5 +1,6 @@
 module SuperGossip ; module DAO
-    # This class provides an interface accessing user entity in SQLite3 database.
+    # This class provides an interface accessing user entity in SQLite3 
+    # database.
     # A +SQLite3::Database+ object should be provided when initialized.
     # 
     # Code snippet:

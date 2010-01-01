@@ -1,9 +1,13 @@
-require File.dirname(__FILE__)+'/util/uuid'
+require 'supergossip/util/uuid'
+require 'supergossip/util/net-ping/ping'
+require 'supergossip/util/net-ping/tcp'
 
 class UUID 
     # Add some methods to class +UUID+.
     class << self
-        # Generate a user UUID from +name+ using SHA1. The namespace is generated using random number. So this can guarantee that the UUID is almost unique.
+        # Generate a user UUID from +name+ using SHA1. The namespace is 
+        # generated using random number. So this can guarantee that the 
+        # UUID is almost unique.
         def user_id name
             namespace = create_random
             ret = create_sha1(name,namespace)

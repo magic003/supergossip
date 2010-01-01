@@ -1,5 +1,6 @@
 module SuperGossip ; module DAO
-    # This class provides an interface accessing routing entry in SQLite3 database. *It should keep that there only one row in the table.*
+    # This class provides an interface accessing routing entry in SQLite3 
+    # database. *It should keep that there only one row in the table.*
     # A +SQLite3::Database+ object should be provided when initialized.
     #
     # Code snippet:

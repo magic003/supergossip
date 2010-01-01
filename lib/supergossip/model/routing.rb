@@ -25,9 +25,34 @@ module SuperGossip ; module Model
         end
     end
     
-    # This class holds the properties of a cached supernode
+    # This class represents the address of the node.
+    class NodeAddress
+        attr_accessor :public_ip, :public_port, :private_ip, :private_port
+
+        # Initialization.
+        def initialize(public_ip=nil,public_port=nil,private_ip=nil,private_port=nil)
+            @public_ip = public_ip
+            @public_port = public_port
+            @private_ip = private_ip
+            @private_port = private_port
+        end
+
+        # Override the == method
+        def ==(other)
+            if other.nil?
+                false
+            else
+                @public_ip == other.public_ip &&
+                @public_port == other.public_port &&
+                @private_ip == other.private_ip &&
+                @private_port == other.private_port
+            end
+        end
+    end
+
+    # This class holds the properties of a cached supernode.
     class Supernode
-        attr_accessor :guid, :authority, :hub, :score_a, :score_h, :latency, :last_update
+        attr_accessor :guid, :authority, :hub, :score_a, :score_h, :latency, :last_update, :address
 
         # Override the == method
         def ==(other)
@@ -40,12 +65,13 @@ module SuperGossip ; module Model
                 @score_a == other.score_a &&
                 @score_h == other.score_h &&
                 @latency == other.latency &&
-                @last_update === other.last_update
+                @last_update === other.last_update &&
+                @address == other.address
             end
         end
     end
 
-    # This class holds the properties of a neighbor peer
+    # This class holds the properties of a neighbor peer.
     class Neighbor
         attr_accessor :guid, :authority, :hub, :authority_sum, :hub_sum, :direction, :last_update
 

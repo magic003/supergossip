@@ -107,6 +107,8 @@ class TestDAO < Test::Unit::TestCase
         supernode.score_h = 0.152
         supernode.latency = 300
         supernode.last_update = DateTime.now
+        supernode.address = 
+            Model::NodeAddress.new('127.0.0.1',8080,'localhost',8080)
         supernodeDAO.addOrUpdate(supernode)
         supernode_return = supernodeDAO.findByGuid(supernode.guid)
         assert_equal(supernode,supernode_return)
@@ -117,6 +119,39 @@ class TestDAO < Test::Unit::TestCase
         supernodeDAO.addOrUpdate(supernode)
         supernode_return = supernodeDAO.findByGuid(supernode.guid)
         assert_equal(supernode,supernode_return)
+
+        # Test the find method
+        supernode.guid = UUID.user_id('sn1').to_s_compact
+        supernode.last_update = DateTime.parse('2009-12-25T10:30:50+08:00')
+        supernodeDAO.addOrUpdate(supernode)
+
+        supernode.guid = UUID.user_id('sn2').to_s_compact
+        supernode.last_update = DateTime.parse('2009-12-24T09:30:50+08:00')
+        supernodeDAO.addOrUpdate(supernode)
+        
+        supernode.guid = UUID.user_id('sn3').to_s_compact
+        supernode.last_update = DateTime.parse('2009-12-25T15:30:50+08:00')
+        supernodeDAO.addOrUpdate(supernode)
+
+        supernode.guid = UUID.user_id('sn4').to_s_compact
+        supernode.last_update = DateTime.parse('2009-12-26T10:10:50+08:00')
+        supernodeDAO.addOrUpdate(supernode)
+
+        sns = supernodeDAO.find(10,0)
+        assert_equal(5,sns.length)
+        0.upto(3) do |i|
+            assert_equal(1,sns[i].last_update<=>sns[i+1].last_update)
+        end
+        sns = supernodeDAO.find(3,0)
+        assert_equal(3,sns.length)
+        0.upto(1) do |i|
+            assert_equal(1,sns[i].last_update<=>sns[i+1].last_update)
+        end
+
+        sns = supernodeDAO.find(5,2)
+        assert_equal(3,sns.length)
+        sns = supernodeDAO.find(5,5)
+        assert_equal(0,sns.length)
     end
 
     # Test +NeighborDAO+ class
