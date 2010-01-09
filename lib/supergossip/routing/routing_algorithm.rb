@@ -1,3 +1,6 @@
+require 'thread'
+require 'socket'
+
 module SuperGossip ; module Routing
     # This is the super class for +SNAlgorithm+ and +ONAlgorithm+ that are 
     # used for different types of nodes. It provides some common methods 
@@ -5,13 +8,14 @@ module SuperGossip ; module Routing
     # not be initialized directly.
     class RoutingAlgorithm  # :nodoc:
         
-        def initialize(db)
+        # Initialization.
+        def initialize(db,routing)
             @db = db
+            @routing = routing
         end
-        protected :new
+        private :new
 
-        protected
-
+        private
         # Fetch a list of latest supernodes from cache. The size of list 
         # is 10 at most. The supernodes are sorted in descent order by PING 
         # latency. If no supernodes found, connect to bootstrap nodes.
@@ -24,12 +28,12 @@ module SuperGossip ; module Routing
                 break if sns.empty?
                 Routing.log { |logger| logger.info(self.class) {"Get #{sns.length} supernodes from cache"}}
 
-                # PING the supernodes
+                # Ping(TCP) the supernodes
                 group = ThreadGroup.new
                 lock = Mutex.new
                 sns.each do |sn|
                     t = Thread.new(sn) { |sn|
-                        ping = Net::Ping::TCP.new(sn.public_ip,sn.public_port)
+                        ping = Net::Ping::TCP.new(sn.public_ip)
                         if ping.ping?
                             sn.latency = ping.duration
                             lock.synchronize {supernodes << sn}
@@ -42,6 +46,7 @@ module SuperGossip ; module Routing
             # Get supernodes from bootstrap nodes
             if supernodes.empty?
                 Routing.log {|logger| logger.info(self.class) {"No supernode cache available. Get from bootstrap nodes."}}
+                # FIXME add bootstrap process
             end
             supernodes.sort! {|s1,s2| s1.latency <=> s2.latency }
             supernodes[0,10]
@@ -61,6 +66,41 @@ module SuperGossip ; module Routing
                 sns = fetch_supernodes
             end
             sns
+        end
+        
+        # Handshaking with the supernode. This is a three way handshake:
+        # 1. This node sends a "CONNECT" request to the supernode;
+        # 2. The supernode sends response with code 200 if accepts the 
+        # connection. Otherwise replies with error code and closes the 
+        # connection.
+        # 3. This node sends response with code 200 if success. Otherwise,
+        # closes the connection.
+        #
+        # Returns the socket connection if success, otherwise +nil+.
+        def handshaking(sn) 
+            sock = TCPSocket.new(sn.public_ip,sn.public_port)
+            if @protocol.connect(sock)
+                sock
+            else
+                sock.close
+                nil
+            end
+        end
+
+        # Ping the supernode via the socket connection to exchange profiles
+        # (including authority, hub and etc). If +msg+ is provided, it will be
+        # sent. Create a new one otherwise.
+        # Return +true+ if success, otherwise +false+.
+        def ping(sock,msg=nil)
+            unless msg.nil? or msg.type == Protocol::MessageType.PING)
+                Routing.log { |logger| logger.error(self.class) { "Not a PING message."}
+                return false
+            if msg.nil?
+                msg = Protocol::Ping.new(@routing.authority,@routing.hub,@routing.authority_sum,@routing.hub_sum,@routing.supernode?)
+            end
+            bytes = @protocol.send_message(sock,msg)
+            Routing.log {|logger| logger.info(self.class) { "PING message is sent. Size: #{bytes} bytes."}}
+            true
         end
 
         # An iterator over supernodes in the cache. 

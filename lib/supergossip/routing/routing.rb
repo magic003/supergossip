@@ -2,7 +2,7 @@ require 'singleton'
 require 'sqlite3'
 
 module SuperGossip ; module Routing
-    # This implements the steps of routing algorithm. It is implemented with 
+    # This is the driver of routing algorithm. It is implemented with 
     # singleton pattern, so there will be only one such instance in the system.
     # = Algorithm
     #
@@ -22,6 +22,7 @@ module SuperGossip ; module Routing
 
             else
                 Routing.log {|logger| logger.info(self.class) {"Ordinary Node"}}
+                ONRouting.new
 
             end
         end
