@@ -9,9 +9,8 @@ module SuperGossip ; module Routing
     class RoutingAlgorithm  # :nodoc:
         
         # Initialization.
-        def initialize(db,routing)
-            @db = db
-            @routing = routing
+        def initialize(driver)
+            @driver = driver    # driver of routing algorithms
         end
         private :new
 
@@ -21,7 +20,7 @@ module SuperGossip ; module Routing
         # latency. If no supernodes found, connect to bootstrap nodes.
         def fetch_supernodes
             supernodes = []
-            iter = SupernodeCacheIterator.new(@db)
+            iter = SupernodeCacheIterator.new(@driver)
             # Get supernodes from cache. Make sure its size is 10.
             while supernodes.length < 10    # FIXME using a parameter for 10
                 sns = iter.next
@@ -53,9 +52,9 @@ module SuperGossip ; module Routing
         end
 
         # The +SuperGossip::Routing::RoutingAlgorithm#fetch_supernodes+ may
-        # return empty list, so this method will try to invoke it for several
-        # times. The interval between each attempt is incremental.
-        def try_fetch_supernodes
+        # return empty list, so this method will attempt to invoke it for 
+        # several times. The interval between each attempt is incremental.
+        def attempt_fetch_supernodes
             interval = 10    # inital interval
             incr = 30        # Incrementation
             sns = fetch_supernodes
@@ -93,23 +92,54 @@ module SuperGossip ; module Routing
         # Return +true+ if success, otherwise +false+.
         def ping(sock,msg=nil)
             unless msg.nil? or msg.type == Protocol::MessageType.PING)
-                Routing.log { |logger| logger.error(self.class) { "Not a PING message."}
+                Routing.log { |logger| logger.error(self.class) { "Not a PING message."}}
                 return false
             if msg.nil?
-                msg = Protocol::Ping.new(@routing.authority,@routing.hub,@routing.authority_sum,@routing.hub_sum,@routing.supernode?)
+                routing = @driver.routing_dao.find()
+                msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_sum,routing.hub_sum,routing.supernode?)
             end
             bytes = @protocol.send_message(sock,msg)
             Routing.log {|logger| logger.info(self.class) { "PING message is sent. Size: #{bytes} bytes."}}
             true
         end
 
+        # Estimate the hub score of the node with +guid+, considering its +hub+
+        # value.
+        # The estimation formula is:
+        #   hub_score = (1 + b/in-degrees + directs_guid/directs_all) * hub
+        # If current node has an in-degree from +guid+, +b+ is 1, 0 otherwise.
+        def estimate_hub_score(guid,hub)
+            out_degrees,in_degrees = @driver.degrees
+            weight = 1.0
+            if @driver.in_link?(guid)
+                weight += 1.0/in_degrees
+            end
+            weight += @driver.directs(guid).to_f/@driver.total_directs
+            weight * hub
+        end
+
+        # Estimate the authority score of the node with +guid+, considering its
+        # +authority+ value.
+        # The estimation formula is:
+        #   authority_score = (1 + b/out-degrees + directs_guid/directs_all)
+        #                       * authority
+        # If current node has an out-degree to +guid+, +b+ is 1, 0 otherwise.
+        def estimate_authority_score(guid,authority)
+            out_degrees,in_degrees = @driver.degrees
+            weight = 1.0
+            if @driver.out_link?(guid)
+                weight += 1.0/out_degrees
+            end
+            weight += @driver.directs(guid).to_f/@driver.total_directs
+            weight * authority
+        end
+
         # An iterator over supernodes in the cache. 
         class SupernodeCacheIterator   # :nodoc:
             # Initialize the iterator. +Limit+ is the returned items each 
             # iteration, and +offset+ is how may items to skip at the beginning.
-            def initialize(db,limit=20,offset=0)
-                @db = db
-                @supernodeDAO = DAO::SupernodeDAO.new(@db)  
+            def initialize(driver,limit=20,offset=0)
+                @driver = driver
                 @limit = limit
                 @offset = offset
             end
@@ -118,7 +148,7 @@ module SuperGossip ; module Routing
             # Pass the result to block if a block is given. Otherwise, 
             # return it.
             def next
-                sns = @supernodeDAO.find(limit,offset)
+                sns = @driver.supernode_dao.find(limit,offset)
                 offset += limit
                 sns
             end

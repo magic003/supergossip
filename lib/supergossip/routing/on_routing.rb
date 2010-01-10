@@ -5,15 +5,15 @@ module SuperGossip ; module Routing
     # This implements the routing algorithm for ordinary nodes.
     class ONRouting < RoutingAlgorithm
         # Initialization
-        def initialize(db,routing)
-            super(db,routing)
+        def initialize(driver)
+            super(driver)
 
             # Create protocol
             @protocol = Protocol::YAMLProtocol.new
             
             # 1. Get supernodes from cache or bootstrap node
             Routing.log{|logger| logger.info(self.class) {"1. Getting SNs ..."}}
-            sns = try_fetch_supernodes
+            sns = attempt_fetch_supernodes
             # 2. Connect to supernodes
             Routing.log {|logger| logger.info(self.class) {"2. Connect to SNs ..."}}
             @socks = []
@@ -79,7 +79,10 @@ module SuperGossip ; module Routing
         # (authority, hub and etc.) from the message, and estimate the scores
         # of the nodes to determine whether adding it to the routing table.
         def on_pong(message)
-
+            score_h = estimate_hub_score(message.guid,message.hub)
+            score_a = estimate_authority_socre(message.guid,message.authority)
+            
+            # attempt to add into routing table
         end
     end
 end ; end

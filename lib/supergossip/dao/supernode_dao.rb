@@ -16,7 +16,7 @@ module SuperGossip ; module DAO
             @db = db
         end
 
-        # Add a new +Supernode+ or update an existing one
+        # Add a new +Supernode+ or update an existing one.
         def addOrUpdate(supernode)
             sql = "SELECT * FROM supernode_cache WHERE guid='#{supernode.guid}';"
             result = @db.execute(sql)

@@ -57,6 +57,77 @@ class TestDAO < Test::Unit::TestCase
         assert result.empty?
     end
 
+    # Test +BuddyDAO+ class
+    def test_buddy_dao
+        sql = 'SELECT * FROM buddy';
+        result = @db.execute(sql)
+        assert result.empty?
+
+        # add a new buddy
+        buddy_dao = DAO::BuddyDAO.new(@db)
+        buddy = Model::Buddy.new
+        buddy.guid = UUID.user_id('buddy').to_s_compact
+        buddy.relationship = Model::Buddy::FOLLOWING
+        buddy_dao.add_or_update(buddy)
+
+        # find buddy
+        buddy_f = buddy_dao.find_by_guid('90977dfdfdfdfd')
+        assert_nil buddy_f
+        buddy_f = buddy_dao.find_by_guid(buddy.guid)
+        assert_equal(buddy.relationship,buddy_f.relationship)
+
+        # update a buddy
+        buddy.relationship = Model::Buddy::FOLLOWER
+        buddy_dao.add_or_update(buddy)
+        buddy_f = buddy_dao.find_by_guid(buddy.guid)
+        assert_equal(Model::Buddy::BOTH,buddy_f.relationship)
+
+        # counts
+        buddy1 = Model::Buddy.new
+        buddy1.guid = UUID.user_id('buddy1').to_s_compact
+        buddy1.relationship = Model::Buddy::FOLLOWING
+        buddy_dao.add_or_update(buddy1)
+
+        buddy2 = Model::Buddy.new
+        buddy2.guid = UUID.user_id('buddy2').to_s_compact
+        buddy2.relationship = Model::Buddy::FOLLOWER
+        buddy_dao.add_or_update(buddy2)
+
+        assert_equal(2,buddy_dao.following_count)
+        assert_equal(2,buddy_dao.follower_count)
+    end
+
+    # Test +MessageDAO+ class
+    def test_message_dao
+        # add messages
+        message_dao = DAO::MessageDAO.new(@db)
+        message1 = Model::Message.new
+        message1.guid = UUID.user_id('node1').to_s_compact
+        message1.content = 'message1'
+        message1.direction = Model::Message::TO
+        message1.time = DateTime.now
+        message_dao.add(message1)
+
+        message2 = Model::Message.new
+        message2.guid = UUID.user_id('node2').to_s_compact
+        message2.content = 'message2'
+        message2.direction = Model::Message::FROM
+        message2.time = DateTime.now
+        message_dao.add(message2)
+
+        message3 = Model::Message.new
+        message3.guid = message1.guid
+        message3.content = 'message3'
+        message3.direction = Model::Message::FROM
+        message3.time = DateTime.now
+        message_dao.add(message3)
+
+        # counts
+        assert_equal(3,message_dao.message_count)
+        assert_equal(2,message_dao.message_count(message1.guid))
+        assert_equal(1,message_dao.message_count(message2.guid))
+    end
+
     # Test +RoutingDAO+ class
     def test_routing_dao
         # check the default value
