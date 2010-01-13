@@ -7,6 +7,7 @@ module SuperGossip ; module Routing
     # that used by both nodes. It behaviors like a abstract class so it should 
     # not be initialized directly.
     class RoutingAlgorithm  # :nodoc:
+        attr_writer :timeout
         
         # Initialization.
         def initialize(driver)
@@ -96,7 +97,7 @@ module SuperGossip ; module Routing
                 return false
             if msg.nil?
                 routing = @driver.routing_dao.find()
-                msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_sum,routing.hub_sum,routing.supernode?)
+                msg = Protocol::Ping.new(@driver.guid,routing.authority,routing.hub,routing.authority_sum,routing.hub_sum,routing.supernode?)
             end
             bytes = @protocol.send_message(sock,msg)
             Routing.log {|logger| logger.info(self.class) { "PING message is sent. Size: #{bytes} bytes."}}

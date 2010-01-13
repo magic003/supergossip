@@ -11,26 +11,51 @@ module SuperGossip ; module Routing
         include Singleton
 
         attr_accessor :routing_dao, :supernode_dao
+        attr_reader :guid
 
         # Initialization
+        #--
+        # FIXME: should use different db handle for routing and user
+        #++
         def initialize
             Routing.log {|logger| logger.info(self.class) {"Initial Routing"} }
             config = Config::Config.instance
             db_path = File.expaned_path(config['db_path'].chomp('/'))
             @db = SQLite3::Database.new(db_path+'/routing.db')
             Routing.log {|logger| logger.info(self.class) {"Load routing database") }}
+            # read guid
+            user= DAO::UserDAO.new(@db).find()
+            if user.nil?
+                Routing.log {|logger| logger.error(self.class) {"No user found"}}
+                # FIXME: better to raise an exception here
+                return nil
+            else 
+                @guid = user.guid
+            end
+            
+            # initialize DAOs
             @routing_dao = DAO::RoutingDAO.new(@db)
             @supernode_dao = DAO::SupernodeDAO.new(@db)
             @buddy_dao = DAO::BuddyDAO.new(@db)
             @message_dao = DAO::MessageDAO.new(@db)
 
+            # Initiate routing algorithms
             routing = @routing_dao.find()
             if routing.supernode?
                 Routing.log {|logger| logger.info(self.class) {"Supernode"}}
 
             else
                 Routing.log {|logger| logger.info(self.class) {"Ordinary Node"}}
-                @algorithm = ONRouting.new(self)
+                # Initiate supernode table
+                max_table_size = config['max_table_size_on'].to_i
+                authority_size = (out_degrees.to_f/total_degrees*max_table_size).round
+                hub_size = (in_degrees.to_f/total_degrees*max_table_size).round
+                supernode_table = SupernodeTable.new(authority,hub_size)
+
+                @algorithm = ONRouting.new(self,supernode_table)
+                timeout = config['timeout'].to_i
+                @algorithm.timeout = timeout
+                @algorithm.start
             end
         end
 

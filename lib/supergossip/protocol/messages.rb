@@ -8,12 +8,14 @@ module SuperGossip ; module Protocol
     # It is used to exchange profile with supernodes. It contains the basic
     # routing properties of the node
     class Ping
-        attr_accessor :authority, :hub, :authority_sum, :hub_sum
+        attr_accessor :guid, :name, :authority, :hub, :authority_sum, :hub_sum
         attr_writer :supernode
         attr_reader :type
 
-        def initialize(authority=nil,hub=nil,authority_sum=nil,hub_sum=nil,supernode=nil)
+        def initialize(guid=nil,name=nil,authority=nil,hub=nil,authority_sum=nil,hub_sum=nil,supernode=nil)
             @type = MessageType::PING
+            @guid = guid
+            @name = name
             @authority = authority
             @hub = hub
             @authority_sum = authority_sum
@@ -29,8 +31,8 @@ module SuperGossip ; module Protocol
     # It is the response for +Ping+ message. It is the same as +Ping+ except
     # the message type.
     class Pong < Ping
-        def initialize(authority=nil,hub=nil,authority_sum=nil,hub_sum=nil,supernode=nil)
-            super(authority,hub,authority_sum,hub_sum,supernode)
+        def initialize(guid=nil,authority=nil,hub=nil,authority_sum=nil,hub_sum=nil,supernode=nil)
+            super(guid,authority,hub,authority_sum,hub_sum,supernode)
             @type = MessageType::PONG
     end
 end ; end

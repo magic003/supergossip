@@ -1,0 +1,20 @@
+#
+# This is the configuration file of the software.
+#
+
+###################
+# System settings #
+###################
+
+# database path
+db_path: ~/workspace/supergossip/db/
+
+######################
+# Routing parameters #
+######################
+
+# Maximum supernode table of an ordinary node
+max_table_size_on: 6
+
+# Timeout of select call on sockets
+timeout: 30

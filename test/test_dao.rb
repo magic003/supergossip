@@ -9,7 +9,7 @@ class TestDAO < Test::Unit::TestCase
         ##
         # Load configuration from file
         config = Config::Config.instance
-        config.load(File.dirname(__FILE__)+'/../config/system.yaml')
+        config.load(File.dirname(__FILE__)+'/../config/conf.yaml')
         db_path = File.expand_path(config['db_path'].chomp('/'))
         unless Dir.exist?(db_path)
            Dir.mkdir(db_path) 
