@@ -60,6 +60,35 @@ module SuperGossip ; module Routing
             return is_added
         end
         
+        # Get the supernodes in this table. If block is given, it provides each supernode socket
+        # to it. If not given, return an array of sockets.
+        def supernodes
+            @lock.synchronize do
+                a_set_copy = @a_set.clone
+                h_set_copy = @h_set.clone
+            end
+            # remove the duplicated entries
+            a_set_copy.delete_if { |ele| h_set_copy.include?(ele) }
+            a_set_copy.concat(h_set_copy)
+            if block_give?
+                a_set_copy.each do |ele|
+                    yield ele
+                end
+            else 
+                socks = []
+                a_set_copy.each do |ele|
+                    socks << ele.sock
+                end
+                socks
+            end
+        end
+
+        # Check whether this table includes the supernode. It only checks 
+        # the +guid+.
+        def include?(sn)
+            @a_hash.has_key?(sn.guid) || @h_hash.has_key?(sn.guid)
+        end
+
         private
 
         # Find the right place to insert entry into the set. Return the index
@@ -88,7 +117,7 @@ module SuperGossip ; module Routing
 
         # Entry holding the connection information in the supernode table.
         class Entry # :nodoc:
-            attr_reader :score, :sock
+            attr_reader :guid,:score, :sock
 
             def initialize(guid,score,sock)
                 @guid = guid

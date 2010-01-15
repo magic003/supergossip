@@ -1,5 +1,6 @@
 require 'thread' 
 require 'socket'
+require 'date'
 
 module SuperGossip ; module Routing
     # This implements the routing algorithm for ordinary nodes.
@@ -21,20 +22,14 @@ module SuperGossip ; module Routing
             # 2. Connect to supernodes
             Routing.log {|logger| logger.info(self.class) {"2. Connect to SNs ..."}}
             @socks = []
-            ping_msg = Protocol::Ping.new(@routing.authority,@routing.hub,@routing.authority_sum,@routing.hub_sum,@routing.supernode?)
-            group = ThreadGroup.new
-            lock = Mutex.new
-            sns.each do |sn|
-                t = Thread.new(sn) { |sn|
-                    sock = handshaking(sn)
-                    if !sock.nil? and ping(sock,ping_msg)
-                        lock.synchronize { @socks << sock }
-                    end
-                }
-            end
-            group.list.each { |t| t.join }
+            @lock = Mutex.new   # lock for @socks
 
-            # 3. Read +Protocol::Pong+ response from supernode, and estimate
+            connect_supernodes(sns)
+
+            # 3. Start the background threads
+            @request_supernodes_thread = start_request_supernodes_thread
+
+            # 4. Read +Protocol::Pong+ response from supernode, and estimate
             #   scores.
             @running = true
             while running
@@ -46,7 +41,7 @@ module SuperGossip ; module Routing
                     readable.each do |sock|
                         if sock.eof?        # The socket has disconnected
                             Routing.log {|logger| logger.info(self.class) {'Socket has disconnected.'}}
-                            @socks.delete(sock)
+                            @lock.synchronize { @socks.delete(sock)}
                             # FIXME test if sock is in routing table, 
                             # remove it if yes.
                             sock.close
@@ -64,6 +59,29 @@ module SuperGossip ; module Routing
         end
 
         private 
+
+        # Connect to supernodes, and PING them by creating threads for
+        # each one.
+        def connect_supernodes(sns)
+            routing = @driver.routing_dao.find
+            ping_msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_sum,routing.hub_sum,routing.supernode?)
+            group = ThreadGroup.new
+            sns.each do |sn|
+                t = Thread.new(sn) { |sn|
+                    sock = handshaking(sn)
+                    if !sock.nil? and ping(sock,ping_msg)
+                        @lock.synchronize { @socks << sock }
+                    end
+                }
+                group.add(t)
+            end
+            group.list.each { |t| t.join }
+        end
+
+        #########################
+        # Handle messages       #
+        #########################
+
         # Handle the received +message+.
         def handle_message(message,sock)
             if message.nil? or !message.respond_to?(:type)
@@ -76,13 +94,17 @@ module SuperGossip ; module Routing
                 on_ping(message,sock)
             when Protocol::MessageType::PONG
                 on_pong(message,sock)
+            when Protocol::MessageType::REQUEST_SUPERNODES
+                on_request_supernodes(message,sock)
+            when Protocol::MessageType::RESPONSE_SUPERNODES
+                on_response_supernodes(message,sock)
             else
                 Routing.log{|logger| logger.error(self.class) {"Unknown message type: #{message.to_s}."}}
             end
         end
         
         # Handle +Protocol::Ping+ message.
-        def on_ping(message)
+        def on_ping(message,sock)
 
         end
 
@@ -97,6 +119,57 @@ module SuperGossip ; module Routing
             result = @supernode_table.add(message.guid,sock,score_a,score_h)
             unless result or sock.closed?
                 sock.close
+            end
+            # add to supernode cache
+            if result
+                sn = sock.node
+                sn.authority = message.authority
+                sn.hub = message.hub
+                sn.score_a = score_a
+                sn.score_h = score_h
+                sn.last_update = DateTime.now
+                @driver.supernode_dao.save_or_update(sn)
+            end
+        end
+
+        # Handle +Protocol::RequestSupernodes+ message.
+        def on_request_supernodes(message,sock)
+        end
+
+        # Handle +Protocol::ResponseSupernodes+ message. Get the responded 
+        # supernodes and PING them.
+        def on_response_supernodes(message,sock)
+            # Delete the supernode which is currently connecting
+            message.supernodes.delete_if {|sn| @supernode_talbe.include?(sn)}
+            # Connect to the supernodes
+            connect_supernodes(message.supernodes)
+        end
+
+        ##########################
+        # Background thread      #
+        ##########################
+        
+        # Create and start a thread which requests supernodes from the 
+        # connecting ones periodically. It returns the +Thread+ object.
+        def start_request_supernodes_thread
+            Thread.new do 
+                # read the request interval
+                interval = @driver.config['request_interval']
+                # number of supernodes each time
+                number = @driver.config['request_number']
+                
+                while true
+                    sleep(interval)
+                    # get supernodes sockets from supernode table
+                    socks = @supernode_table.supernodes
+                    # Sends +RequestSupernodes+ message. Because the number of socks is not
+                    # so large, and it doesn't wait for the response after sending, it sends
+                    # messages one by one here instead of using multiple threads.
+                    request_msg = Protocol::RequestSupernodes.new(number)
+                    socks.each do |sock|
+                        request_supernodes(sock,request_msg)
+                    end
+                end
             end
         end
     end

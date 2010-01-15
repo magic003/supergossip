@@ -18,3 +18,9 @@ max_table_size_on: 6
 
 # Timeout of select call on sockets
 timeout: 30
+
+# The interval of requesting supernodes
+request_interval: 180
+
+# Number of supernodes requested each time
+request_number: 5

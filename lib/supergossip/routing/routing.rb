@@ -10,8 +10,7 @@ module SuperGossip ; module Routing
     class Routing
         include Singleton
 
-        attr_accessor :routing_dao, :supernode_dao
-        attr_reader :guid
+        attr_reader :guid, :config, :routing_dao, :supernode_dao
 
         # Initialization
         #--

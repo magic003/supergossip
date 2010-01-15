@@ -17,7 +17,7 @@ module SuperGossip ; module DAO
         end
 
         # Add a new +Supernode+ or update an existing one.
-        def addOrUpdate(supernode)
+        def add_or_update(supernode)
             sql = "SELECT * FROM supernode_cache WHERE guid='#{supernode.guid}';"
             result = @db.execute(sql)
             if result.empty?    # add new
@@ -31,7 +31,7 @@ module SuperGossip ; module DAO
         end
 
         # Get a +Supernode+ by GUID. Return +nil+ if not found.
-        def findByGuid(guid)
+        def find_by_guid(guid)
             sql = "SELECT * FROM supernode_cache WHERE guid='#{guid}';"
             result = @db.execute(sql)
             if result.empty?

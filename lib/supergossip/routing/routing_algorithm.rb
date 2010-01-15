@@ -1,6 +1,11 @@
 require 'thread'
 require 'socket'
 
+# Open class +TCPSocket+ to add +node+ which is th end of this connection.
+class TCPSocket
+    attr_accessor :node
+end
+
 module SuperGossip ; module Routing
     # This is the super class for +SNAlgorithm+ and +ONAlgorithm+ that are 
     # used for different types of nodes. It provides some common methods 
@@ -39,6 +44,7 @@ module SuperGossip ; module Routing
                             lock.synchronize {supernodes << sn}
                         end
                     }
+                    group.add(t)
                 end
                 group.list.each { |t| t.join }
             end
@@ -67,6 +73,10 @@ module SuperGossip ; module Routing
             end
             sns
         end
+
+        ###########################
+        # Send messages           #
+        ###########################
         
         # Handshaking with the supernode. This is a three way handshake:
         # 1. This node sends a "CONNECT" request to the supernode;
@@ -80,6 +90,7 @@ module SuperGossip ; module Routing
         def handshaking(sn) 
             sock = TCPSocket.new(sn.public_ip,sn.public_port)
             if @protocol.connect(sock)
+                sock.node = sn
                 sock
             else
                 sock.close
@@ -92,9 +103,10 @@ module SuperGossip ; module Routing
         # sent. Create a new one otherwise.
         # Return +true+ if success, otherwise +false+.
         def ping(sock,msg=nil)
-            unless msg.nil? or msg.type == Protocol::MessageType.PING)
+            unless msg.nil? or msg.type == Protocol::MessageType.PING
                 Routing.log { |logger| logger.error(self.class) { "Not a PING message."}}
                 return false
+            end
             if msg.nil?
                 routing = @driver.routing_dao.find()
                 msg = Protocol::Ping.new(@driver.guid,routing.authority,routing.hub,routing.authority_sum,routing.hub_sum,routing.supernode?)
@@ -103,6 +115,23 @@ module SuperGossip ; module Routing
             Routing.log {|logger| logger.info(self.class) { "PING message is sent. Size: #{bytes} bytes."}}
             true
         end
+
+        # Request supernodes from supernodes in the routing table. It sends a
+        # +Protocol::RequestSupernodes+ message to the node. 
+        # Return +true+ if success, otherwise +false+.
+        def request_supernodes(sock,msg)
+            unless msg.nil? or msg.type == Protocol::MessageType.REQUEST_SUPERNODES
+                Routing.log { |logger| logger.error(self.class) { "Not a REQUEST_SUPERNODES message."}}
+                return false
+            end
+            bytes = @protocol.send_message(sock,msg)
+            Routing.log {|logger| logger.info(self.class) { "REQUEST_SUPERNODES message is sent. Size: #{bytes} bytes."}}
+            true
+        end
+        
+        ##########################
+        # Estimations            #
+        ##########################
 
         # Estimate the hub score of the node with +guid+, considering its +hub+
         # value.
