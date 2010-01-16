@@ -24,3 +24,6 @@ request_interval: 180
 
 # Number of supernodes requested each time
 request_number: 5
+
+# The interval of updating authority and hub values
+update_routing_interval: 300

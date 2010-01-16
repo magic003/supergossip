@@ -159,6 +159,38 @@ module SuperGossip ; module Routing
             weight * authority
         end
 
+        # Estimate the authority and hub values of HITS algorithm.
+        # Return the new routing properties.
+        def estimate_hits
+            peers = @driver.neighbors
+            authority_prime = 0.0
+            hub_prime = 0.0
+            square_sum_authority_prime = 0.0
+            square_sum_hub_prime = 0.0
+            # Compute the sum
+            peers.each do |p|
+                authority_prime += p.hub
+                hub_prime += p.authority
+                square_sum_authority_prime += p.authority_prime**2
+                square_sum_hub_prime += p.hub_prime**2
+            end
+            square_sum_authority_prime += authority_prime**2
+            square_sum_hub_prime += hub_prime**2
+            # Normalize
+            authority = authority_prime**2/square_sum_authority_prime
+            hub = hub_prime**2/square_sum_hub_prime
+
+            # Update routing
+            new_routing = @driver.update_routing do |routing|
+                routing.authority = authority
+                routing.hub = hub
+                routing.authority_prime = authority_prime
+                routing.hub_prime = hub_prime
+            end
+
+            new_routing
+        end
+
         # An iterator over supernodes in the cache. 
         class SupernodeCacheIterator   # :nodoc:
             # Initialize the iterator. +Limit+ is the returned items each 

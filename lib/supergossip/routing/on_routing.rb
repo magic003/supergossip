@@ -28,6 +28,7 @@ module SuperGossip ; module Routing
 
             # 3. Start the background threads
             @request_supernodes_thread = start_request_supernodes_thread
+            @compute_hits_thread = start_compute_hits_thread
 
             # 4. Read +Protocol::Pong+ response from supernode, and estimate
             #   scores.
@@ -169,6 +170,30 @@ module SuperGossip ; module Routing
                     socks.each do |sock|
                         request_supernodes(sock,request_msg)
                     end
+                end
+            end
+        end
+        
+        # Create and start a thread which computes the values of HITS 
+        # algorithm periodically. It returns the +Thread+ object.
+        def start_compute_hits_thread
+            Thread.new do
+                interval = @driver.config['update_routing_interval']
+                while true
+                    sleep(interval)
+                    routing = estimate_hits
+
+                    # Send updated values to the supernodes
+                    ping_msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
+                    sns = @supernode_table.supernodes
+                    group = ThreadGroup.new
+                    sns.each do |sn|
+                        t = Thread.new(sn) do |sn|
+                            ping(sn.socket,ping_msg) unless sn.socket.nil?
+                        end
+                        group.add(t)
+                    end
+                    group.list.each { |t| t.join }
                 end
             end
         end

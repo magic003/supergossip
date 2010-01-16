@@ -52,5 +52,25 @@ module SuperGossip ; module DAO
                 neighbor
             end
         end
+
+        # Find all the neighbors.
+        def find_all
+            sql = "SELECT * FROM neighbor;"
+            result = @db.execute(sql)
+            neighbors = []
+            neighbor = Model::Peer.new
+            result.each do |row|
+                neighbor.guid = row[0]
+                neighbor.name = row[1]
+                neighbor.authority = row[2].to_f
+                neighbor.hub = row[3].to_f
+                neighbor.authority_prime = row[4].to_f
+                neighbor.hub_prime = row[5].to_f
+                neighbor.direction = row[6].to_i
+                neighbor.last_update = DateTime.parse(row[7])
+                neighbors << neighbor
+            end
+            neighbors
+        end
     end
 end ; end

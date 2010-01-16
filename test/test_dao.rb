@@ -257,5 +257,31 @@ class TestDAO < Test::Unit::TestCase
         neighbor_dao.add_or_update(neighbor)
         neighbor_return = neighbor_dao.find_by_guid(neighbor.guid)
         assert_equal(neighbor,neighbor_return)
+
+        # Test find all
+        ngbr1 = Model::Peer.new
+        ngbr1.guid = UUID.user_id('neighbor1').to_s_compact
+        ngbr1.name = 'neighbor1'
+        ngbr1.authority = 0.335
+        ngbr1.hub = 0.011
+        ngbr1.authority_prime = 12.765
+        ngbr1.hub_prime = 2.554
+        ngbr1.direction = Model::Peer::IN
+        ngbr1.last_update = DateTime.now
+        neighbor_dao.add_or_update(ngbr1)
+
+        ngbr2 = Model::Peer.new
+        ngbr2.guid = UUID.user_id('neighbor2').to_s_compact
+        ngbr2.name = 'neighbor2'
+        ngbr2.authority = 0.335
+        ngbr2.hub = 0.011
+        ngbr2.authority_prime = 12.765
+        ngbr2.hub_prime = 2.554
+        ngbr2.direction = Model::Peer::IN
+        ngbr2.last_update = DateTime.now
+        neighbor_dao.add_or_update(ngbr2)
+
+        ngbrs = neighbor_dao.find_all
+        assert_equal(3,ngbrs.size)
     end
 end

@@ -24,6 +24,7 @@ module SuperGossip ; module Routing
             # initialize DAOs
             @routing_dao = DAO::RoutingDAO.new(@routing_db)
             @supernode_dao = DAO::SupernodeDAO.new(@routing_db)
+            @neighbor_dao = DAO::NeighborDAO.new(@routing_db)
             @buddy_dao = DAO::BuddyDAO.new(@user_db)
             @message_dao = DAO::MessageDAO.new(@user_db)
 
@@ -84,10 +85,20 @@ module SuperGossip ; module Routing
             @message_dao.message_count
         end
 
-        # Shutdown the routing algorithm. It will stop all the threads, and 
-        # close database connection.
+        # Get all the neighbors of this node in the social network graph.
+        def neighbors
+            @neighbor_dao.find_all
+        end
+
+        def update_routing
+            routing = @routing_dao.find
+            yield routing
+            @routing_dao.add_or_update(routing)
+            routing
+        end
+
+        # Shutdown the routing algorithm. It will stop all the threads.
         def shutdown
-            @db.close
         end
     end
 end ; end
