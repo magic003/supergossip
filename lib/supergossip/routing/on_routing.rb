@@ -64,7 +64,7 @@ module SuperGossip ; module Routing
         # each one.
         def connect_supernodes(sns)
             routing = @driver.routing_dao.find
-            ping_msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_sum,routing.hub_sum,routing.supernode?)
+            ping_msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
             group = ThreadGroup.new
             sns.each do |sn|
                 t = Thread.new(sn) { |sn|

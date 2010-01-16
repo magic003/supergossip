@@ -1,29 +1,18 @@
-require 'singleton'
-require 'sqlite3'
-
 module SuperGossip ; module Routing
     include Log
 
-    # This is the driver of routing algorithm. It is implemented with 
-    # singleton pattern, so there will be only one such instance in the system.
-    #
+    # This is the driver of routing algorithm. 
     class Routing
-        include Singleton
 
         attr_reader :guid, :config, :routing_dao, :supernode_dao
 
-        # Initialization
-        #--
-        # FIXME: should use different db handle for routing and user
-        #++
-        def initialize
+        def initialize(user_db,routing_db)
+            @user_db = user_db
+            @routing_db = routing_db
             Routing.log {|logger| logger.info(self.class) {"Initial Routing"} }
-            config = Config::Config.instance
-            db_path = File.expaned_path(config['db_path'].chomp('/'))
-            @db = SQLite3::Database.new(db_path+'/routing.db')
-            Routing.log {|logger| logger.info(self.class) {"Load routing database") }}
+            @config = Config::Config.instance
             # read guid
-            user= DAO::UserDAO.new(@db).find()
+            user= DAO::UserDAO.new(@user_db).find()
             if user.nil?
                 Routing.log {|logger| logger.error(self.class) {"No user found"}}
                 # FIXME: better to raise an exception here
@@ -33,10 +22,10 @@ module SuperGossip ; module Routing
             end
             
             # initialize DAOs
-            @routing_dao = DAO::RoutingDAO.new(@db)
-            @supernode_dao = DAO::SupernodeDAO.new(@db)
-            @buddy_dao = DAO::BuddyDAO.new(@db)
-            @message_dao = DAO::MessageDAO.new(@db)
+            @routing_dao = DAO::RoutingDAO.new(@routing_db)
+            @supernode_dao = DAO::SupernodeDAO.new(@routing_db)
+            @buddy_dao = DAO::BuddyDAO.new(@user_db)
+            @message_dao = DAO::MessageDAO.new(@user_db)
 
             # Initiate routing algorithms
             routing = @routing_dao.find()
@@ -52,6 +41,7 @@ module SuperGossip ; module Routing
                 supernode_table = SupernodeTable.new(authority,hub_size)
 
                 @algorithm = ONRouting.new(self,supernode_table)
+                # set parameters for routing algorithm
                 timeout = config['timeout'].to_i
                 @algorithm.timeout = timeout
                 @algorithm.start

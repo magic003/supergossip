@@ -23,45 +23,43 @@ module SuperGossip ; module Routing
         # Attempt to add a new supernode. After checking the current table size
         # and comparing the scores with the existing ones, it decides whether
         # to accept this new one. Returns +true+ if accepted, otherwise +false+.
-        def add(guid,sock,authority_score,hub_score)
+        def add(sn)
             is_added = false
             @lock.synchronize do
                 # Try authority set
-                index = SupernodeTable.binary_insert(@a_set,authority_score)
+                index = SupernodeTable.binary_insert(@a_set,sn.score_a)
                 if index < @a_set.length   # can be accepted
-                    entry = Entry.new(guid,authority_score,sock)
-                    @a_set.insert(index,entry)
-                    @a_hash[guid] = entry
+                    @a_set.insert(index,sn)
+                    @a_hash[sn.guid] = sn
                     is_added = true
                 end
                 # the set size excesses the maximum size
                 if @a_set.length > @max_authority_size      
                     # remove the last one
-                    entry = @a_set.pop
-                    @a_hash.delete(entry.guid)
-                    entry.sock.close    # close the socket
+                    sn_delete = @a_set.pop
+                    @a_hash.delete(sn_delete.guid)
+                    sn_delete.socket.close    # close the socket
                 end
 
                 # Try hub set
-                index = SupernodeTable.binary_insert(@h_set,hub_score)
+                index = SupernodeTable.binary_insert(@h_set,sn.score_h)
                 if index < @h_set.length     # can be accepted
-                    entry = Entry.new(guid,hub_score,sock)
-                    @h_set.insert(index,entry)
-                    @h_hash[guid] = entry
+                    @h_set.insert(index,sn)
+                    @h_hash[sn.guid] = sn
                     is_added = true
                 end
                 # the set size excesses the maximum size
                 if @h_set.length > @max_hub_size
-                    entry = @h_set.pop
-                    @h_hash.delete(entry.guid)
-                    entry.sock.close    # close the socket
+                    sn_delete = @h_set.pop
+                    @h_hash.delete(sn_delete.guid)
+                    sn_delete.socket.close    # close the socket
                 end
             end
             return is_added
         end
         
-        # Get the supernodes in this table. If block is given, it provides each supernode socket
-        # to it. If not given, return an array of sockets.
+        # Get the supernodes in this table. If block is given, it provides each supernode
+        # to it. If not given, return an array of supernodes.
         def supernodes
             @lock.synchronize do
                 a_set_copy = @a_set.clone
@@ -75,11 +73,11 @@ module SuperGossip ; module Routing
                     yield ele
                 end
             else 
-                socks = []
+                sns = []
                 a_set_copy.each do |ele|
-                    socks << ele.sock
+                    sns << ele
                 end
-                socks
+                sns
             end
         end
 
@@ -112,17 +110,6 @@ module SuperGossip ; module Routing
                     end
                 end
                 index = (start+end_)/2
-            end
-        end
-
-        # Entry holding the connection information in the supernode table.
-        class Entry # :nodoc:
-            attr_reader :guid,:score, :sock
-
-            def initialize(guid,score,sock)
-                @guid = guid
-                @score = score
-                @sock = sock
             end
         end
     end

@@ -131,47 +131,48 @@ class TestDAO < Test::Unit::TestCase
     # Test +RoutingDAO+ class
     def test_routing_dao
         # check the default value
-        routingDAO = DAO::RoutingDAO.new(@db)
-        routing = routingDAO.find
+        routing_dao = DAO::RoutingDAO.new(@db)
+        routing = routing_dao.find
         assert !routing.nil?
         assert_equal(1.0,routing.authority)
         assert_equal(1.0,routing.hub)
-        assert_equal(1.0,routing.authority_sum)
-        assert_equal(1.0,routing.hub_sum)
+        assert_equal(1.0,routing.authority_prime)
+        assert_equal(1.0,routing.hub_prime)
         assert(!routing.supernode?)
 
         # test add one
         sql = 'DELETE FROM routing;'
         @db.execute(sql)
-        routing = routingDAO.find
+        routing = routing_dao.find
         assert_nil routing
         routing_new = Model::Routing.new
         routing_new.authority = 0.050
         routing_new.hub = 0.002
-        routing_new.authority_sum = 15.567
-        routing_new.hub_sum = 3.789
+        routing_new.authority_prime = 15.567
+        routing_new.hub_prime = 3.789
         routing_new.supernode = false
-        routingDAO.addOrUpdate(routing_new)
-        routing = routingDAO.find
+        routing_dao.add_or_update(routing_new)
+        routing = routing_dao.find
         assert_equal(routing_new,routing)
 
         # test update one
         routing_new.supernode = true
-        routingDAO.addOrUpdate(routing_new)
-        routing = routingDAO.find
+        routing_dao.add_or_update(routing_new)
+        routing = routing_dao.find
         assert_equal(routing_new,routing)
     end
 
     # Test +SupernodeDAO+ class
     def test_supernode_dao
         # Test empty table
-        supernodeDAO = DAO::SupernodeDAO.new(@db)
-        supernode = supernodeDAO.findByGuid('32323239847045')
+        supernode_dao = DAO::SupernodeDAO.new(@db)
+        supernode = supernode_dao.find_by_guid('32323239847045')
         assert_nil supernode
 
         # Test add a new one
-        supernode = Model::Supernode.new
+        supernode = Model::Peer.new
         supernode.guid = UUID.user_id('supernode').to_s_compact
+        supernode.name='supernde'
         supernode.authority = 0.045
         supernode.hub = 0.152
         supernode.score_a = 0.059
@@ -180,76 +181,81 @@ class TestDAO < Test::Unit::TestCase
         supernode.last_update = DateTime.now
         supernode.address = 
             Model::NodeAddress.new('127.0.0.1',8080,'localhost',8080)
-        supernodeDAO.addOrUpdate(supernode)
-        supernode_return = supernodeDAO.findByGuid(supernode.guid)
+        supernode_dao.add_or_update(supernode)
+        supernode_return = supernode_dao.find_by_guid(supernode.guid)
         assert_equal(supernode,supernode_return)
 
         # Test update an existing one
         supernode.authority = 0.112
         supernode.score_a = 0.133
-        supernodeDAO.addOrUpdate(supernode)
-        supernode_return = supernodeDAO.findByGuid(supernode.guid)
+        supernode_dao.add_or_update(supernode)
+        supernode_return = supernode_dao.find_by_guid(supernode.guid)
         assert_equal(supernode,supernode_return)
 
         # Test the find method
         supernode.guid = UUID.user_id('sn1').to_s_compact
+        supernode.name = 'sn1'
         supernode.last_update = DateTime.parse('2009-12-25T10:30:50+08:00')
-        supernodeDAO.addOrUpdate(supernode)
+        supernode_dao.add_or_update(supernode)
 
         supernode.guid = UUID.user_id('sn2').to_s_compact
+        supernode.name = 'sn2'
         supernode.last_update = DateTime.parse('2009-12-24T09:30:50+08:00')
-        supernodeDAO.addOrUpdate(supernode)
+        supernode_dao.add_or_update(supernode)
         
         supernode.guid = UUID.user_id('sn3').to_s_compact
+        supernode.name = 'sn3'
         supernode.last_update = DateTime.parse('2009-12-25T15:30:50+08:00')
-        supernodeDAO.addOrUpdate(supernode)
+        supernode_dao.add_or_update(supernode)
 
         supernode.guid = UUID.user_id('sn4').to_s_compact
+        supernode.name = 'sn4'
         supernode.last_update = DateTime.parse('2009-12-26T10:10:50+08:00')
-        supernodeDAO.addOrUpdate(supernode)
+        supernode_dao.add_or_update(supernode)
 
-        sns = supernodeDAO.find(10,0)
+        sns = supernode_dao.find(10,0)
         assert_equal(5,sns.length)
         0.upto(3) do |i|
             assert_equal(1,sns[i].last_update<=>sns[i+1].last_update)
         end
-        sns = supernodeDAO.find(3,0)
+        sns = supernode_dao.find(3,0)
         assert_equal(3,sns.length)
         0.upto(1) do |i|
             assert_equal(1,sns[i].last_update<=>sns[i+1].last_update)
         end
 
-        sns = supernodeDAO.find(5,2)
+        sns = supernode_dao.find(5,2)
         assert_equal(3,sns.length)
-        sns = supernodeDAO.find(5,5)
+        sns = supernode_dao.find(5,5)
         assert_equal(0,sns.length)
     end
 
     # Test +NeighborDAO+ class
     def test_neighbor_dao
         # Test empty table
-        neighborDAO = DAO::NeighborDAO.new(@db)
-        neighbor = neighborDAO.findByGuid("34343434343")
+        neighbor_dao = DAO::NeighborDAO.new(@db)
+        neighbor = neighbor_dao.find_by_guid("34343434343")
         assert_nil neighbor
 
         # Test add a new one
-        neighbor = Model::Neighbor.new
+        neighbor = Model::Peer.new
         neighbor.guid = UUID.user_id('neighbor').to_s_compact
+        neighbor.name = 'neighbor'
         neighbor.authority = 0.335
         neighbor.hub = 0.011
-        neighbor.authority_sum = 12.765
-        neighbor.hub_sum = 2.554
-        neighbor.direction = 0
+        neighbor.authority_prime = 12.765
+        neighbor.hub_prime = 2.554
+        neighbor.direction = Model::Peer::INOUT
         neighbor.last_update = DateTime.now
-        neighborDAO.addOrUpdate(neighbor)
-        neighbor_return = neighborDAO.findByGuid(neighbor.guid)
+        neighbor_dao.add_or_update(neighbor)
+        neighbor_return = neighbor_dao.find_by_guid(neighbor.guid)
         assert_equal(neighbor,neighbor_return)
 
         # Test update an existing one
         neighbor.authority = 0.245
-        neighbor.authority_sum = 9.582
-        neighborDAO.addOrUpdate(neighbor)
-        neighbor_return = neighborDAO.findByGuid(neighbor.guid)
+        neighbor.authority_prime = 9.582
+        neighbor_dao.add_or_update(neighbor)
+        neighbor_return = neighbor_dao.find_by_guid(neighbor.guid)
         assert_equal(neighbor,neighbor_return)
     end
 end

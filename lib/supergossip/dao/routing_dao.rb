@@ -15,15 +15,15 @@ module SuperGossip ; module DAO
         end
 
         # Add a new +Routing+ record or update an existing one
-        def addOrUpdate(routing)
+        def add_or_update(routing)
             sql = 'SELECT * FROM routing;'
             result = @db.execute(sql)
             if result.empty?    # add new
                 sql = "INSERT INTO routing VALUES(%f,%f,%f,%f,%d);"
             else # update existing one
-                sql = "UPDATE routing SET authority=%f, hub=%f, authority_sum=%f, hub_sum=%f, is_supernode=%d;"
+                sql = "UPDATE routing SET authority=%f, hub=%f, authority_prime=%f, hub_prime=%f, is_supernode=%d;"
             end
-            sql = sql % [routing.authority, routing.hub, routing.authority_sum, routing.hub_sum, if routing.supernode?; 1; else 0; end] 
+            sql = sql % [routing.authority, routing.hub, routing.authority_prime, routing.hub_prime, if routing.supernode?; 1; else 0; end] 
             @db.execute(sql)
         end
 
@@ -38,8 +38,8 @@ module SuperGossip ; module DAO
                 result.each do |row|     # result should have one row at most
                     routing.authority = row[0].to_f
                     routing.hub = row[1].to_f
-                    routing.authority_sum = row[2].to_f
-                    routing.hub_sum = row[3].to_f
+                    routing.authority_prime = row[2].to_f
+                    routing.hub_prime = row[3].to_f
                     routing.supernode = (row[4].to_i != 0)
                 end
                 routing

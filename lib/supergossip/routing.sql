@@ -5,11 +5,11 @@
 
 DROP TABLE IF EXISTS routing;
 CREATE TABLE routing (
-    authority       REAL,
-    hub             REAL,
-    authority_sum   REAL,
-    hub_sum         REAL,
-    is_supernode    INTEGER     -- 0 is false, 1 is true
+    authority           REAL,
+    hub                 REAL,
+    authority_prime     REAL,
+    hub_prime           REAL,
+    is_supernode        INTEGER     -- 0 is false, 1 is true
 );
 -- insert the default row
 INSERT INTO routing VALUES(1.0,1.0,1.0,1.0,0);
@@ -17,6 +17,7 @@ INSERT INTO routing VALUES(1.0,1.0,1.0,1.0,0);
 DROP TABLE IF EXISTS supernode_cache;
 CREATE TABLE supernode_cache (
     guid            TEXT PRIMARY KEY NOT NULL,
+    name            TEXT,
     authority       REAL,
     hub             REAL,
     score_a         REAL,
@@ -29,13 +30,14 @@ CREATE TABLE supernode_cache (
     private_port    INTEGER
 );
 
-DROP TABLE IF EXISTS neighbors;
-CREATE TABLE neighbors (
-    guid            TEXT PRIMARY KEY NOT NULL,
-    authority       REAL,
-    hub             REAL,
-    authority_sum   REAL,
-    hub_sum         REAL,
-    direction       INTEGER,        -- -1 for in, 0 for in-out, 1 for out
-    last_update     TEXT DEFAULT (datetime('now'))
+DROP TABLE IF EXISTS neighbor;
+CREATE TABLE neighbor (
+    guid                TEXT PRIMARY KEY NOT NULL,
+    name                TEXT,
+    authority           REAL,
+    hub                 REAL,
+    authority_prime     REAL,
+    hub_prime           REAL,
+    direction           INTEGER,        -- -1 for in, 0 for in-out, 1 for out
+    last_update         TEXT DEFAULT (datetime('now'))
 );

@@ -22,13 +22,14 @@ module SuperGossip ; module Routing
 
         private
         # Fetch a list of latest supernodes from cache. The size of list 
-        # is 10 at most. The supernodes are sorted in descent order by PING 
+        # is 10 at most. The supernodes are sorted in descent order by ping
         # latency. If no supernodes found, connect to bootstrap nodes.
         def fetch_supernodes
             supernodes = []
             iter = SupernodeCacheIterator.new(@driver)
             # Get supernodes from cache. Make sure its size is 10.
-            while supernodes.length < 10    # FIXME using a parameter for 10
+            size = 10
+            while supernodes.length < size    # FIXME using a parameter for 10
                 sns = iter.next
                 break if sns.empty?
                 Routing.log { |logger| logger.info(self.class) {"Get #{sns.length} supernodes from cache"}}
@@ -38,7 +39,7 @@ module SuperGossip ; module Routing
                 lock = Mutex.new
                 sns.each do |sn|
                     t = Thread.new(sn) { |sn|
-                        ping = Net::Ping::TCP.new(sn.public_ip)
+                        ping = Net::Ping::TCP.new(sn.address.public_ip)
                         if ping.ping?
                             sn.latency = ping.duration
                             lock.synchronize {supernodes << sn}
@@ -55,7 +56,7 @@ module SuperGossip ; module Routing
                 # FIXME add bootstrap process
             end
             supernodes.sort! {|s1,s2| s1.latency <=> s2.latency }
-            supernodes[0,10]
+            supernodes[0,size]
         end
 
         # The +SuperGossip::Routing::RoutingAlgorithm#fetch_supernodes+ may
@@ -79,16 +80,10 @@ module SuperGossip ; module Routing
         ###########################
         
         # Handshaking with the supernode. This is a three way handshake:
-        # 1. This node sends a "CONNECT" request to the supernode;
-        # 2. The supernode sends response with code 200 if accepts the 
-        # connection. Otherwise replies with error code and closes the 
-        # connection.
-        # 3. This node sends response with code 200 if success. Otherwise,
-        # closes the connection.
-        #
         # Returns the socket connection if success, otherwise +nil+.
         def handshaking(sn) 
-            sock = TCPSocket.new(sn.public_ip,sn.public_port)
+            sock = TCPSocket.new(sn.address.public_ip,sn.address.public_port)
+            sn.socket = sock
             if @protocol.connect(sock)
                 sock.node = sn
                 sock
@@ -109,7 +104,7 @@ module SuperGossip ; module Routing
             end
             if msg.nil?
                 routing = @driver.routing_dao.find()
-                msg = Protocol::Ping.new(@driver.guid,routing.authority,routing.hub,routing.authority_sum,routing.hub_sum,routing.supernode?)
+                msg = Protocol::Ping.new(@driver.guid,routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
             end
             bytes = @protocol.send_message(sock,msg)
             Routing.log {|logger| logger.info(self.class) { "PING message is sent. Size: #{bytes} bytes."}}
