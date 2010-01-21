@@ -42,14 +42,37 @@ class TestDAO < Test::Unit::TestCase
         user.name = 'test'
         user.password = 'testpswd'
         user.guid = UUID.user_id(user.name).to_s_compact
-        userDAO.add(user)
+        user.online_hours = 0
+        userDAO.add_or_update(user)
 
         @db.execute(sql) do |row|
             assert_equal(user.guid,row[0])
             assert_equal(user.name,row[1])
             assert_equal(user.password,row[2])
-            assert_not_nil(row[3])
+            assert_equal(user.online_hours,row[3].to_i)
+            assert_not_nil(row[4])
         end
+
+        # add another user, should failed
+        user1 = Model::User.new
+        user1.name = 'test1'
+        user1.password = 'test1passwd'
+        user1.guid = UUID.user_id(user1.name).to_s_compact
+        assert_equal(false,userDAO.add_or_update(user1))
+
+        # find the user
+        user_new = userDAO.find
+        assert_equal(user.guid,user_new.guid)
+        assert_equal(user.name,user_new.name)
+        assert_equal(user.password,user_new.password)
+        assert_equal(user.online_hours,user_new.online_hours)
+        assert_not_nil(user_new.register_date)
+
+        # update the user
+        user.online_hours += 1
+        userDAO.add_or_update(user)
+        user_new = userDAO.find
+        assert_equal(user.online_hours,user_new.online_hours)
 
         # delete all users
         DAO::UserDAO.delete(@db)

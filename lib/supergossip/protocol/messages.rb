@@ -11,6 +11,7 @@ module SuperGossip ; module Protocol
     # Root class of all the messages in this protocol.
     class Message
         attr_reader :type
+        attr_accessor :ctime, :ftime, :bytesize
     end
 
     # It is used to exchange profile with supernodes. It contains the basic

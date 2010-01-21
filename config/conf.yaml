@@ -27,3 +27,21 @@ request_number: 5
 
 # The interval of updating authority and hub values
 update_routing_interval: 300
+
+# Force this node to be supernode
+force_supernode: false
+
+# Force this node to be ordinary node
+force_oridnary_node: false
+
+# Interval of watching if this node can be promoted to a supernode
+supernode_watch_interval: 3600
+
+# Minimum download speed to become a supernode in KB/s unit
+min_download_speed: 30
+
+# Minimum upload speed to become a supernode in KB/s unit
+min_upload_speed: 20
+
+# Minimum online rate (hours per day) to become a supernode
+min_online_rate: 4

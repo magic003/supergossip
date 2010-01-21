@@ -9,6 +9,7 @@ CREATE TABLE user (
     guid            TEXT PRIMARY KEY NOT NULL,
     name            TEXT,
     password        TEXT,
+    online_hours    INTEGER DEFAULT 0,
     register_date   TEXT DEFAULT (date('now'))
 );
 

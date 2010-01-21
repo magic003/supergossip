@@ -1,5 +1,6 @@
 require 'thread'
 require 'socket'
+require 'date'
 
 # Open class +TCPSocket+ to add +node+ which is th end of this connection.
 class TCPSocket
@@ -12,7 +13,7 @@ module SuperGossip ; module Routing
     # that used by both nodes. It behaviors like a abstract class so it should 
     # not be initialized directly.
     class RoutingAlgorithm  # :nodoc:
-        attr_writer :timeout
+        attr_writer :timeout, :bandwidth_manager
         
         # Initialization.
         def initialize(driver)
@@ -84,7 +85,13 @@ module SuperGossip ; module Routing
         def handshaking(sn) 
             sock = TCPSocket.new(sn.address.public_ip,sn.address.public_port)
             sn.socket = sock
-            if @protocol.connect(sock)
+            res = @protocol.connect(sock) do |up_b,up_t,down_b,down_t|
+                unless @bandwidth_manager.nil?
+                    @bandwidth_manager.uploaded(up_b,up_t)
+                    @bandwidth_manager.downloaed(down_b,down_t)
+                end
+            end
+            if res
                 sock.node = sn
                 sock
             else
@@ -105,8 +112,11 @@ module SuperGossip ; module Routing
             if msg.nil?
                 routing = @driver.routing_dao.find()
                 msg = Protocol::Ping.new(@driver.guid,routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
+                msg.ctime = DateTime.now
             end
+            msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
+            @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
             Routing.log {|logger| logger.info(self.class) { "PING message is sent. Size: #{bytes} bytes."}}
             true
         end
@@ -119,7 +129,9 @@ module SuperGossip ; module Routing
                 Routing.log { |logger| logger.error(self.class) { "Not a REQUEST_SUPERNODES message."}}
                 return false
             end
+            msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
+            @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager
             Routing.log {|logger| logger.info(self.class) { "REQUEST_SUPERNODES message is sent. Size: #{bytes} bytes."}}
             true
         end

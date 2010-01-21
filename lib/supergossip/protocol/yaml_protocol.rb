@@ -23,9 +23,13 @@ module SuperGossip ; module Protocol
         # object. Returns +nil+ if error happens.
         def read_message(sock)
             body = ''
+            bytes = 0
             sock.each_line do |line|
+                bytes += line.bytesize
                 if line == CRLF     # end of message
-                    return YAML::load(body)
+                    msg = YAML::load(body)
+                    msg.bytesize = bytes
+                    return msg
                 else
                     body << line
                 end

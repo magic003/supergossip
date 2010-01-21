@@ -58,6 +58,15 @@ module SuperGossip ; module Routing
             return is_added
         end
         
+        # Deletes the supernode from this table.
+        def delete(sn)
+            # No harm if not included
+            @a_set.delete(sn)
+            @a_hash.delete(sn.guid)
+            @h_set.delete(sn)
+            @h_hash.delete(sn.guid)
+        end
+
         # Get the supernodes in this table. If block is given, it provides each supernode
         # to it. If not given, return an array of supernodes.
         def supernodes

@@ -2,6 +2,7 @@ require 'supergossip/util/uuid'
 require 'supergossip/util/net-ping/ping'
 require 'supergossip/util/net-ping/tcp'
 require 'supergossip/util/log'
+require 'supergossip/util/ip'
 
 class UUID 
     # Add some methods to class +UUID+.

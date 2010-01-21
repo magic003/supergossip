@@ -1,7 +1,7 @@
 module SuperGossip ; module Model
     # This class holds the profile of a user.
     class User
-        attr_accessor :guid, :name, :password, :register_date
+        attr_accessor :guid, :name, :password, :online_hours, :register_date
     end
 
     # This class holds the following or follower.

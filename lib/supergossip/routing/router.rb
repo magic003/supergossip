@@ -2,7 +2,7 @@ module SuperGossip ; module Routing
     include Log
 
     # This is the driver of routing algorithm. 
-    class Routing
+    class Router
 
         attr_reader :guid, :config, :routing_dao, :supernode_dao
 
@@ -12,7 +12,7 @@ module SuperGossip ; module Routing
             Routing.log {|logger| logger.info(self.class) {"Initial Routing"} }
             @config = Config::Config.instance
             # read guid
-            user= DAO::UserDAO.new(@user_db).find()
+            user= DAO::UserDAO.new(@user_db).find
             if user.nil?
                 Routing.log {|logger| logger.error(self.class) {"No user found"}}
                 # FIXME: better to raise an exception here
@@ -28,6 +28,7 @@ module SuperGossip ; module Routing
             @buddy_dao = DAO::BuddyDAO.new(@user_db)
             @message_dao = DAO::MessageDAO.new(@user_db)
 
+            @bandwidth_manager = BandwidthManager.new
             # Initiate routing algorithms
             routing = @routing_dao.find()
             if routing.supernode?
@@ -35,16 +36,20 @@ module SuperGossip ; module Routing
 
             else
                 Routing.log {|logger| logger.info(self.class) {"Ordinary Node"}}
+                # Start supernode watch thread
+                @supernode_watch_thread = start_supernode_watch_thread
+
                 # Initiate supernode table
                 max_table_size = config['max_table_size_on'].to_i
                 authority_size = (out_degrees.to_f/total_degrees*max_table_size).round
                 hub_size = (in_degrees.to_f/total_degrees*max_table_size).round
-                supernode_table = SupernodeTable.new(authority,hub_size)
+                @supernode_table = SupernodeTable.new(authority,hub_size)
 
-                @algorithm = ONRouting.new(self,supernode_table)
+                @algorithm = ONRouting.new(self,@supernode_table)
                 # set parameters for routing algorithm
                 timeout = config['timeout'].to_i
                 @algorithm.timeout = timeout
+                @algorithm.bandwidth_manager = @bandwidth_manager
                 @algorithm.start
             end
         end
@@ -90,6 +95,7 @@ module SuperGossip ; module Routing
             @neighbor_dao.find_all
         end
 
+        # Update the routing properties.
         def update_routing
             routing = @routing_dao.find
             yield routing
@@ -99,6 +105,58 @@ module SuperGossip ; module Routing
 
         # Shutdown the routing algorithm. It will stop all the threads.
         def shutdown
+            @supernode_watch_thread.exit
+            @algorithm.stop
+        end
+
+        private
+
+        # Starts a thread to examine if this node can be promoted to 
+        # a supernode.
+        def start_supernode_watch_thread
+            Thread.new do 
+                while true
+                    sleep(@config['supernode_watch_interval'])
+                    if supernode_capable?
+                        promote_to_supernode
+                        break
+                    end
+                end
+            end
+        end
+        
+        # Promotes this ordinary node to supernode.
+        def promote_to_supernode
+            # Stop the current algorithm
+            @algorithm.stop
+            # TODO start the supernode routing algorithm
+        end
+
+        # Return +true+ if this node can be a supernode.
+        def supernode_capable?
+            if @config['force_supernode']
+                true
+            elsif @config['force_ordinary_node']
+                false
+            else
+                # Check IP address
+                ip = IP.local_ip
+                Routing.log {|logger| logger.info(self.class) {"Local IP: #{ip}"}}
+                return false if ip.nil? || IP.private?(ip)
+                # Check bandwidth
+                up_bandwidth = @bandwidth_manager.upload_bandwidth
+                down_bandwidth = @bandwidth_manager.download_bandwidth
+                Routing.log {|logger| logger.info(self.class) {"Upload bandwidth: #{up_bandwidth}KB/s, download bandwidth: #{down_bandwidth}KB/s"}}
+                return false if up_bandwidth<@config['min_upload_speed'].to_i ||
+                            down_bandwidth<@config['min_download_speed'].to_i
+                # Check online time
+                user= DAO::UserDAO.new(@user_db).find
+                days = (DateTime.now-user.register_date).to_i
+                if days==0 or (user.online_hours/days.to_f)<@config['min_online_rate'].to_i
+                    return false
+                end
+                return true
+            end
         end
     end
 end ; end

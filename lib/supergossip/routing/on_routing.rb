@@ -43,8 +43,8 @@ module SuperGossip ; module Routing
                         if sock.eof?        # The socket has disconnected
                             Routing.log {|logger| logger.info(self.class) {'Socket has disconnected.'}}
                             @lock.synchronize { @socks.delete(sock)}
-                            # FIXME test if sock is in routing table, 
                             # remove it if yes.
+                            @supernode_table.delete(sock.node) if @supernode_table.include?(sn.node)
                             sock.close
                         else        # Message is ready for reading
                             msg = @protocol.read_message(sock)
@@ -59,6 +59,13 @@ module SuperGossip ; module Routing
             end
         end
 
+        # Stops the running algorithm and threads.
+        def stop
+            @request_supernodes_thread.exit
+            @compute_hits_thread.exit
+            @running = false
+        end
+
         private 
 
         # Connect to supernodes, and PING them by creating threads for
@@ -66,6 +73,7 @@ module SuperGossip ; module Routing
         def connect_supernodes(sns)
             routing = @driver.routing_dao.find
             ping_msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
+            ping_msg.ctime = DateTime.now
             group = ThreadGroup.new
             sns.each do |sn|
                 t = Thread.new(sn) { |sn|
@@ -85,10 +93,12 @@ module SuperGossip ; module Routing
 
         # Handle the received +message+.
         def handle_message(message,sock)
+            time = Time.now
             if message.nil? or !message.respond_to?(:type)
                 Routing.log {|logger| logger.error(self.class) {"Not a correct message: #{message.to_s}."}}
                 return
             end
+            @bandwidth_manager.downloaded(message.bytesize,time-message.ftime.to_time) unless @bandwidth_manager.nil?
 
             case message.type
             when Protocol::MessageType::PING
@@ -167,6 +177,7 @@ module SuperGossip ; module Routing
                     # so large, and it doesn't wait for the response after sending, it sends
                     # messages one by one here instead of using multiple threads.
                     request_msg = Protocol::RequestSupernodes.new(number)
+                    request_msg.ctime = DateTime.now
                     socks.each do |sock|
                         request_supernodes(sock,request_msg)
                     end
@@ -185,6 +196,7 @@ module SuperGossip ; module Routing
 
                     # Send updated values to the supernodes
                     ping_msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
+                    ping_msg.ctime = DateTime.now
                     sns = @supernode_table.supernodes
                     group = ThreadGroup.new
                     sns.each do |sn|
