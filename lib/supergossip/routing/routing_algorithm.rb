@@ -7,7 +7,7 @@ class TCPSocket
     attr_accessor :node
 end
 
-module SuperGossip ; module Routing
+module SuperGossip::module Routing
     # This is the super class for +SNAlgorithm+ and +ONAlgorithm+ that are 
     # used for different types of nodes. It provides some common methods 
     # that used by both nodes. It behaviors like a abstract class so it should 
@@ -129,14 +129,13 @@ module SuperGossip ; module Routing
         # sent. Create a new one otherwise.
         # Return +true+ if success, otherwise +false+.
         def ping(sock,msg=nil)
-            unless msg.nil? or msg.type == Protocol::MessageType.PING
+            unless msg.nil? or msg.type == Protocol::MessageType::PING
                 Routing.log { |logger| logger.error(self.class) { "Not a PING message."}}
                 return false
             end
             if msg.nil?
                 msg = construct_ping
             end
-            msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
             @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
             Routing.log {|logger| logger.info(self.class) { "PING message is sent. Size: #{bytes} bytes."}}
@@ -147,14 +146,13 @@ module SuperGossip ; module Routing
         # not provided, a new one will be created.
         # Returns +true+ if success, +false+ otherwise.
         def pong(sock,msg=nil)
-            unless msg.nil? or msg.type == Protocol::MessageType.PONG
+            unless msg.nil? or msg.type == Protocol::MessageType::PONG
                 Routing.log {|logger| logger.error(self.class) { 'Not a PONG message.'}}
                 return false
             end
             if msg.nil?
                 msg = construct_pong
             end
-            msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
             @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
             Routing.log {|logger| logger.info(self.class) { "PONG message is sent. Size: #{bytes} bytes."}}
@@ -165,11 +163,10 @@ module SuperGossip ; module Routing
         # +Protocol::RequestSupernodes+ message to the node. 
         # Returns +true+ if success, otherwise +false+.
         def request_supernodes(sock,msg)
-            unless msg.nil? or msg.type == Protocol::MessageType.REQUEST_SUPERNODES
+            if msg.nil? or msg.type != Protocol::MessageType::REQUEST_SUPERNODES
                 Routing.log { |logger| logger.error(self.class) { "Not a REQUEST_SUPERNODES message."}}
                 return false
             end
-            msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
             @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
             Routing.log {|logger| logger.info(self.class) { "REQUEST_SUPERNODES message is sent. Size: #{bytes} bytes."}}
@@ -179,11 +176,10 @@ module SuperGossip ; module Routing
         # Sends +Protocol::ResponseSupernodes+ message  to the node.
         # Returns +true+ if success, otherwise +false+.
         def response_supernodes(sock,msg)
-            unless msg.nil? or msg.type == Protocol::MessageType.RESPONSE_SUPERNODES
+            if msg.nil? or msg.type != Protocol::MessageType::RESPONSE_SUPERNODES
                 Routing.log { |logger| logger.error(self.class) { "Not a RESPONSE_SUPERNODES message."}}
                 return false
             end
-            msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
             @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
             Routing.log {|logger| logger.info(self.class) { "RESPONSE_SUPERNODES message is sent. Size: #{bytes} bytes."}}
@@ -354,4 +350,4 @@ module SuperGossip ; module Routing
             end
         end
     end
-end ; end
+end

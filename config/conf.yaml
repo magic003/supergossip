@@ -18,8 +18,14 @@ listening_port: 8964
 # Number of supernodes fetched from cache each time
 fetched_supernodes_number: 10
 
-# Maximum supernode table of an ordinary node
-max_table_size_on: 6
+# Maximum supernode connections of an ordinary node
+max_supernode_connection_on: 6
+
+# Maximum supernode connections of a supernode
+max_supernode_connection_sn: 32
+
+# Maximum ordinary node connections of a supernode
+max_ordinarynode_connection_sn: 30
 
 # Timeout of select call on sockets
 timeout: 30

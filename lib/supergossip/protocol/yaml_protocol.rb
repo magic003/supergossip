@@ -1,4 +1,5 @@
 require 'yaml'
+require 'date'
 
 module SuperGossip::Protocol
     # This class implements the protocol in +YAML+ format. The message is
@@ -15,6 +16,7 @@ module SuperGossip::Protocol
         # Sends a message to another connected node. Returns the number of 
         # bytes written.
         def send_message(sock,msg)
+            msg.ftime = DateTime.now
             body = msg.to_yaml + CRLF
             sock.write(body)
         end

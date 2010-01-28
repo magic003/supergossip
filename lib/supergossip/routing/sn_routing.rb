@@ -6,8 +6,9 @@ module SuperGossip::Routing
     # This is the routing algorithm for supernodes.
     class SNRouting < RoutingAlgorithm
         # Initialization
-        def initialize(driver,supernode_table,protocol)
+        def initialize(driver,supernode_table,on_table,protocol)
             super(driver,supernode_table,protocol)
+            @ordinary_node_table = no_table
             @nodes_filter_strategy = IPPrefixStrategy.new
         end
 
@@ -84,6 +85,29 @@ module SuperGossip::Routing
             end
         end
 
+        # Stops the running algorithm and threads.
+        def stop
+            @request_supernodes_thread.exit
+            @compute_hits_thread.exit
+            @running = false
+        end
+
+        # Advertise the node itself to bootstrap nodes and supernodes 
+        # currently connecting.
+        def advertise
+            # TODO add advertise to bootstrap nodes
+            msg = construct_advertisement
+            sns = @supernode_table.supernodes
+            group = ThreadGroup.new
+            sns.each do |sn|
+                t = Thread.new(sn) {
+                    send_advertisement(sn.socket,msg)    
+                }
+                group.add(t)
+            end
+            group.list.each { |t| t.join }
+        end
+
         private
         ##########################
         # Handle messages        #
@@ -126,6 +150,8 @@ module SuperGossip::Routing
                 on_request_supernodes(message,sock)
             when Protocol::MessageType::RESPONSE_SUPERNODES
                 on_response_supernodes(message,sock)
+            when Protocol::MessageType::PROMOTION_ADS
+                on_supernode_promotion(message,sock)
             else
                 Routing.log{|logger| logger.error(self.class) {"Unknown message type: #{message.to_s}."}}
             end
@@ -198,6 +224,54 @@ module SuperGossip::Routing
             message.supernodes.delete_if {|sn| @supernode_table.include?(sn)}
             # Connect to the supernodes
             connect_supernodes(message.supernodes)
+        end
+
+        # Handles +Protocol::PromotionAdvertisement+ message.
+        def on_supernode_promotion(message,sock)
+            # Delete it from ordinary node table
+            @ordinary_node_table.delete(sock.node)
+            # Try to add to supernode table
+            score_h = estimate_hub_score(message.guid,message.hub)
+            score_a = estimate_authority_score(message.guid,message.authority)
+
+            Routing.update_node_from_promotion(sock.node,message)
+            sock.node.score_h = score_h
+            sock.node.score_a = score_a
+            result = @supernode_table.add(sock.node)
+            unless result or sock.closed?
+                sock.close
+            end
+            # Save to supernode cache
+            if result
+                @driver.save_supernode(sock.node)
+            end
+
+            # TODO maybe need to forward to neighbors
+        end
+
+        ######################################
+
+        # Constructs a +Protocol::PromotionAdvertisement+ message.
+        def construct_advertisement
+            msg = Protocol::PromotionAdvertisement.new
+            msg.ctime = DateTime.now
+            msg.guid = @driver.guid
+            msg.name = @driver.name
+            msg.connection_count = @supernode_table.size
+            Routing.update_advertisement_from_routing(msg,@driver.routing)
+            msg
+        end
+
+        # Sends the advertisement +msg+. Returns +true+ if successful.
+        def send_advertisement(sock,msg)
+            if msg.nil? or msg.type != Protocol::MessageType::POROMOTION_ADS
+                Routing.log {|logger| logger.error(self.class) {"Not a PROMOTION_ADS message."}}
+                return false
+            end
+            bytes = @protocol.send_message(sock,msg)
+            @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
+            Routing.log {|logger| logger.info(self.class) {"PROMOTION_ADS message is sent. Size: #{bytes} bytes."}}
+            true
         end
     end
 end

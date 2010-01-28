@@ -6,6 +6,7 @@ module SuperGossip::Protocol
 
         REQUEST_SUPERNODES = 0x10
         RESPONSE_SUPERNODES = 0x11
+        PROMOTION_ADS = 0x12
     end
 
     # Root class of all the messages in this protocol.
@@ -58,6 +59,14 @@ module SuperGossip::Protocol
         attr_accessor :num, :supernodes
         def initialize
             @type = MessageType::RESPONSE_SUPERNODES
+        end
+    end
+
+    # It represents an advertisement that the node has promoted to a
+    # supernode. Actually, it is a kind of +Ping+ message.
+    class PromotionAdvertisement < Ping
+        def initialize
+            @type = MessageType::PROMOTION_ADS
         end
     end
 end 

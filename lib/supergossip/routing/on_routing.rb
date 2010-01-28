@@ -93,9 +93,11 @@ module SuperGossip::Routing
             end
         end
         
-        # Handle +Protocol::Ping+ message.
+        # Handle +Protocol::Ping+ message. *It does nothing because ordinary
+        # node dosen't accept such messages.*
         def on_ping(message,sock)
-
+            # Do nothing
+            Routing.log {|logger| logger.warn(self.class) {"Ordinary node doesn't accept Ping messages."}}
         end
 
         # Handle +Protocol::Pong+ message. Read the routing properties
@@ -119,8 +121,12 @@ module SuperGossip::Routing
             end
         end
 
-        # Handle +Protocol::RequestSupernodes+ message.
+        # Handle +Protocol::RequestSupernodes+ message. 
+        # *It does nothing because ordinary node dosen't accept such 
+        # messages.*
         def on_request_supernodes(message,sock)
+            # Do nothing
+            Routing.log {|logger| logger.warn(self.class) {"Ordinary node doesn't accept RequestSupernodes messages."}}
         end
 
         # Handle +Protocol::ResponseSupernodes+ message. Get the responded 

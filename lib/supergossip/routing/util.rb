@@ -16,6 +16,11 @@ module SuperGossip
             node.last_update = DateTime.now
         end
 
+        # Updates the properties of a +node+ from a +promotion+ message.
+        def self.update_node_from_promotion(node,promotion)
+            self.update_node_from_ping(node,promotion)
+        end
+
         # Updates the properties of a +node+ from a +pong+ message.
         def self.update_node_from_pong(node,pong)
             self.update_node_from_ping(node,pong)
@@ -33,6 +38,11 @@ module SuperGossip
         # Updates the +pong+ message from the routing properties.
         def self.update_pong_from_routing(pong,routing)
             self.update_ping_from_routing(pong,routing)
+        end
+
+        # Updates the +ads+ message from routing properties.
+        def self.update_advertisement_from_routing(ads,routing)
+            self.update_ping_from_routing(ads,routing)
         end
     end
 end

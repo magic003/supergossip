@@ -29,29 +29,39 @@ module SuperGossip::Routing
             @message_dao = DAO::MessageDAO.new(@user_db)
 
             @bandwidth_manager = BandwidthManager.new
+            @protocol = Protocol::YAMLProtocol.new
+
             # Initiate routing algorithms
             routing = @routing_dao.find()
             if routing.supernode?
                 Routing.log {|logger| logger.info(self.class) {"Supernode"}}
-
+                # Start supernode routing algorithm
+                max_sn_table_size = @config['max_supernode_connection_sn']
+                authority_size = (out_degrees.to_f/total_degrees*max_sn_table_size).round
+                hub_size = (in_degrees.to_f/total_degrees*max_sn_table_size).round
+                @supernode_table = SupernodeTable.new(authority_size,hub_size)
+                
+                max_on_table_size = @config['max_ordinarynode_connection_sn']
+                @on_table = OrdinaryNodeTable.new(max_on_table_size)
+                @algorithm = SNRouting.new(self,@supernode_table,@on_table,@protocol)
             else
                 Routing.log {|logger| logger.info(self.class) {"Ordinary Node"}}
                 # Start supernode watch thread
                 @supernode_watch_thread = start_supernode_watch_thread
 
                 # Initiate supernode table
-                max_table_size = config['max_table_size_on'].to_i
+                max_table_size = @config['max_supernode_connection_on'].to_i
                 authority_size = (out_degrees.to_f/total_degrees*max_table_size).round
                 hub_size = (in_degrees.to_f/total_degrees*max_table_size).round
-                @supernode_table = SupernodeTable.new(authority,hub_size)
+                @supernode_table = SupernodeTable.new(authority_size,hub_size)
 
-                @algorithm = ONRouting.new(self,@supernode_table)
-                # set parameters for routing algorithm
-                timeout = config['timeout'].to_i
-                @algorithm.timeout = timeout
-                @algorithm.bandwidth_manager = @bandwidth_manager
-                @algorithm.start
+                @algorithm = ONRouting.new(self,@supernode_table,@protocol)
             end
+            # set parameters for routing algorithm
+            timeout = config['timeout'].to_i
+            @algorithm.timeout = timeout
+            @algorithm.bandwidth_manager = @bandwidth_manager
+            @algorithm.start
         end
 
         # Test if the node with +guid+ is a following(out_link). Return +true+ 
@@ -114,7 +124,7 @@ module SuperGossip::Routing
 
         # Saves supernode to cache. Updates it if exists.
         def save_supernode(sn)
-            @supernode_dao.save_or_update(sn)
+            @supernode_dao.add_or_update(sn)
         end
 
         #############END OF ROUTING DATABASE TABLES####
@@ -128,12 +138,16 @@ module SuperGossip::Routing
         private
 
         # Starts a thread to examine if this node can be promoted to 
-        # a supernode.
+        # a supernode. 
         def start_supernode_watch_thread
             Thread.new do 
                 while true
                     sleep(@config['supernode_watch_interval'])
                     if supernode_capable?
+                        update_routing do |routing|
+                            routing.supernode = true
+                        end
+
                         promote_to_supernode
                         break
                     end
@@ -143,10 +157,29 @@ module SuperGossip::Routing
         
         # Promotes this ordinary node to supernode.
         def promote_to_supernode
+            Routing.log {|logger| logger.info(self.class) {"Promote to supernode."}}
             # Stop the current algorithm
             @algorithm.stop
-            # TODO advertise supernode
-            # TODO start the supernode routing algorithm
+            Routing.log {|logger| logger.info(self.class) {"Current routing algorithm is stopped."}}
+            # Start the supernode routing algorithm
+            max_sn_table_size = @config['max_supernode_connection_sn']
+            authority_size = (out_degrees.to_f/total_degrees*max_sn_table_size).round
+            hub_size = (in_degrees.to_f/total_degrees*max_sn_table_size).round
+            @supernode_table.max_authority_size = authority_size
+            @supernode_table.max_hub_size = hub_size
+                
+            max_on_table_size = @config['max_ordinarynode_connection_sn']
+            @on_table = OrdinaryNodeTable.new(max_on_table_size)
+            @algorithm = SNRouting.new(self,@supernode_table,@on_table,@protocol)
+            # set parameters for routing algorithm
+            timeout = config['timeout'].to_i
+            @algorithm.timeout = timeout
+            @algorithm.bandwidth_manager = @bandwidth_manager
+            @algorithm.start
+
+            # Advertise supernode
+            Routing.log {|logger| logger.info(self.class) {"Sending supernode advertisement."}}
+            @algorithm.advertise
         end
 
         # Return +true+ if this node can be a supernode.

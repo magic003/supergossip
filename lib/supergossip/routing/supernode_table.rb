@@ -8,6 +8,8 @@ module SuperGossip::Routing
     #
     # This class should be *thread safe*.
     class SupernodeTable
+        attr_accessor :max_authority_size, :max_hub_size
+
         def initialize(authority_max_size,hub_max_size)
             @max_authority_size = authority_max_size
             @a_comparator = Proc.new {|x,y| y.score_a<=>x.score_a}
@@ -106,11 +108,14 @@ module SuperGossip::Routing
             sns = []
             @lock.synchronize do
                 sns = @a_hash.values + @h_hash.values
+                sns.uniq!
+=begin
                 # remove the duplicated ones
                 @a_hash.each do |key,val|
                     # Cannot use +Array#delete+, it deletes all the items
                     sns.delete_at(sns.index(val)) if @h_hash.has_key?(key)
                 end
+=end
             end
             if block_given?
                 sns.each do |s|
