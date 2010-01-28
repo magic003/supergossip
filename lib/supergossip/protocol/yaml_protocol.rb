@@ -1,6 +1,6 @@
 require 'yaml'
 
-module SuperGossip ; module Protocol
+module SuperGossip::Protocol
     # This class implements the protocol in +YAML+ format. The message is
     # converted to +YAML+ string by +Object#to_yaml+, and appended with a
     # CRLF to indicating the end of message.
@@ -37,4 +37,4 @@ module SuperGossip ; module Protocol
             nil
         end
     end
-end ; end
+end

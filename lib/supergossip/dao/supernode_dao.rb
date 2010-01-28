@@ -5,7 +5,7 @@ module SuperGossip ; module DAO
     # database.
     # A +SQLite3::Database+ object should be provided when initialized.
     # *Although this class performs operations on +supernode_cache+ table,
-    # it only accepts and returns the object of +Model::Peer+.*
+    # it only accepts and returns the object of +Model::Node+.*
     #
     # Code snippet:
     #
@@ -39,7 +39,7 @@ module SuperGossip ; module DAO
             if result.empty?
                 nil
             else
-                supernode = Model::Peer.new
+                supernode = Model::Node.new
                 supernode.guid = guid
                 result.each do |row|    # should be only one row
                     supernode.name = row[1]
@@ -64,7 +64,7 @@ module SuperGossip ; module DAO
             result = @db.execute(sql)
             supernodes = []
             result.each do |row|
-                sn = Model::Peer.new
+                sn = Model::Node.new
                 sn.guid = row[0]
                 sn.name = row[1]
                 sn.authority = row[2].to_f

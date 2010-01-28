@@ -94,14 +94,16 @@ module SuperGossip ; module Model
     end
 
 =end
-    # This is an abstraction of peers in the network. It contains of all
+    # This is an abstraction of nodes in the network. It contains of all
     # the properties that may be used during the routing. For different kinds
-    # of peers, it may only have part of properties set.
-    class Peer
+    # of nodes, it may only have part of properties set.
+    class Node
         attr_accessor :guid, :name, :latency, :address, :direction, :last_update
         attr_accessor :authority, :hub, :authority_prime, :hub_prime, :score_a, :score_h
-        attr_accessor :socket
+        attr_accessor :socket, :connection_count
         attr_writer :supernode
+
+        transient :direction, :score_a, :score_h, :socket
 
         # Defines the direction of the edges in network graphs.
         # *The values should be consistent with them in database schema.*

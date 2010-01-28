@@ -16,8 +16,15 @@ module SuperGossip ; module Routing
         attr_writer :timeout, :bandwidth_manager
         
         # Initialization.
-        def initialize(driver)
+        def initialize(driver,supernode_table,protocol)
             @driver = driver    # driver of routing algorithms
+            @supernode_table = supernode_table  # supernode table
+            @protocol = protocol
+
+            @socks = []         # All the socket connections
+            @lock = Mutex.new   # lock for @socks
+            @running = false    # whether this algorithm is running,
+                                # should be set to true in 'start' method
         end
         private :new
 
@@ -29,8 +36,8 @@ module SuperGossip ; module Routing
             supernodes = []
             iter = SupernodeCacheIterator.new(@driver)
             # Get supernodes from cache. Make sure its size is 10.
-            size = 10
-            while supernodes.length < size    # FIXME using a parameter for 10
+            size = @driver.config['fetched_supernodes_number'].to_i || 10
+            while supernodes.length < size    
                 sns = iter.next
                 break if sns.empty?
                 Routing.log { |logger| logger.info(self.class) {"Get #{sns.length} supernodes from cache"}}
@@ -76,23 +83,40 @@ module SuperGossip ; module Routing
             sns
         end
 
+        # Connect to supernodes, and PING them by creating threads for
+        # each one.
+        def connect_supernodes(sns)
+            ping_msg = construct_ping
+            group = ThreadGroup.new
+            sns.each do |sn|
+                t = Thread.new(sn) { |sn|
+                    sock = handshaking(sn)
+                    if !sock.nil? and ping(sock,ping_msg)
+                        @lock.synchronize { @socks << sock }
+                    end
+                }
+                group.add(t)
+            end
+            group.list.each { |t| t.join }
+        end
+
         ###########################
         # Send messages           #
         ###########################
         
-        # Handshaking with the supernode. This is a three way handshake:
+        # Handshaking with the supernode. 
         # Returns the socket connection if success, otherwise +nil+.
         def handshaking(sn) 
             sock = TCPSocket.new(sn.address.public_ip,sn.address.public_port)
             sn.socket = sock
-            res = @protocol.connect(sock) do |up_b,up_t,down_b,down_t|
-                unless @bandwidth_manager.nil?
-                    @bandwidth_manager.uploaded(up_b,up_t)
-                    @bandwidth_manager.downloaed(down_b,down_t)
-                end
+            sock.node = sn
+            res,datas = @protocol.connect(sock) 
+            unless @bandwidth_manager.nil?
+                @bandwidth_manager.uploaded(datas[0],datas[1])
+                @bandwidth_manager.downloaed(datas[2],datas[3])
             end
+
             if res
-                sock.node = sn
                 sock
             else
                 sock.close
@@ -110,9 +134,7 @@ module SuperGossip ; module Routing
                 return false
             end
             if msg.nil?
-                routing = @driver.routing_dao.find()
-                msg = Protocol::Ping.new(@driver.guid,routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
-                msg.ctime = DateTime.now
+                msg = construct_ping
             end
             msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
@@ -121,9 +143,27 @@ module SuperGossip ; module Routing
             true
         end
 
+        # Sends a pong message to the node via +sock+ connection. If +msg+ is
+        # not provided, a new one will be created.
+        # Returns +true+ if success, +false+ otherwise.
+        def pong(sock,msg=nil)
+            unless msg.nil? or msg.type == Protocol::MessageType.PONG
+                Routing.log {|logger| logger.error(self.class) { 'Not a PONG message.'}}
+                return false
+            end
+            if msg.nil?
+                msg = construct_pong
+            end
+            msg.ftime = DateTime.now
+            bytes = @protocol.send_message(sock,msg)
+            @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
+            Routing.log {|logger| logger.info(self.class) { "PONG message is sent. Size: #{bytes} bytes."}}
+            true
+        end
+
         # Request supernodes from supernodes in the routing table. It sends a
         # +Protocol::RequestSupernodes+ message to the node. 
-        # Return +true+ if success, otherwise +false+.
+        # Returns +true+ if success, otherwise +false+.
         def request_supernodes(sock,msg)
             unless msg.nil? or msg.type == Protocol::MessageType.REQUEST_SUPERNODES
                 Routing.log { |logger| logger.error(self.class) { "Not a REQUEST_SUPERNODES message."}}
@@ -131,11 +171,47 @@ module SuperGossip ; module Routing
             end
             msg.ftime = DateTime.now
             bytes = @protocol.send_message(sock,msg)
-            @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager
+            @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
             Routing.log {|logger| logger.info(self.class) { "REQUEST_SUPERNODES message is sent. Size: #{bytes} bytes."}}
             true
         end
+
+        # Sends +Protocol::ResponseSupernodes+ message  to the node.
+        # Returns +true+ if success, otherwise +false+.
+        def response_supernodes(sock,msg)
+            unless msg.nil? or msg.type == Protocol::MessageType.RESPONSE_SUPERNODES
+                Routing.log { |logger| logger.error(self.class) { "Not a RESPONSE_SUPERNODES message."}}
+                return false
+            end
+            msg.ftime = DateTime.now
+            bytes = @protocol.send_message(sock,msg)
+            @bandwidth_manager.uploaded(bytes,Time.now-msg.ftime.to_time) unless @bandwidth_manager.nil?
+            Routing.log {|logger| logger.info(self.class) { "RESPONSE_SUPERNODES message is sent. Size: #{bytes} bytes."}}
+            true
+        end
         
+        # Constructs a new +Protocol::Ping+ message.
+        def construct_ping
+            msg = Protocol::Ping.new
+            msg.ctime = DateTime.now
+            msg.guid = @driver.guid
+            msg.name = @driver.name
+            msg.connection_count = @supernode_table.size
+            Routing.update_ping_from_routing(msg,@driver.routing)
+            msg
+        end
+
+        # Constructs a new +Protocol::Pong+ message.
+        def construct_pong
+            msg = Protocol::Pong.new
+            msg.ctime = DateTime.now
+            msg.guid = @driver.guid
+            msg.name = @driver.name
+            msg.connection_count = @supernode_table.size
+            Routing.update_ping_from_routing(msg,@driver.routing)
+            msg
+        end
+
         ##########################
         # Estimations            #
         ##########################
@@ -174,13 +250,13 @@ module SuperGossip ; module Routing
         # Estimate the authority and hub values of HITS algorithm.
         # Return the new routing properties.
         def estimate_hits
-            peers = @driver.neighbors
+            nodes = @driver.neighbors
             authority_prime = 0.0
             hub_prime = 0.0
             square_sum_authority_prime = 0.0
             square_sum_hub_prime = 0.0
             # Compute the sum
-            peers.each do |p|
+            nodes.each do |p|
                 authority_prime += p.hub
                 hub_prime += p.authority
                 square_sum_authority_prime += p.authority_prime**2
@@ -202,6 +278,61 @@ module SuperGossip ; module Routing
 
             new_routing
         end
+
+        ##########################
+        # Background thread      #
+        ##########################
+        
+        # Create and start a thread which requests supernodes from the 
+        # connecting ones periodically. It returns the +Thread+ object.
+        def start_request_supernodes_thread
+            Thread.new do 
+                # read the request interval
+                interval = @driver.config['request_interval'].to_i
+                # number of supernodes each time
+                number = @driver.config['request_number'].to_i
+                
+                while true
+                    sleep(interval)
+                    # get supernodes sockets from supernode table
+                    socks = @supernode_table.supernodes
+                    # Sends +RequestSupernodes+ message. Because the number of socks is not
+                    # so large, and it doesn't wait for the response after sending, it sends
+                    # messages one by one here instead of using multiple threads.
+                    request_msg = Protocol::RequestSupernodes.new(number)
+                    request_msg.ctime = DateTime.now
+                    socks.each do |sock|
+                        request_supernodes(sock,request_msg)
+                    end
+                end
+            end
+        end
+        
+        # Create and start a thread which computes the values of HITS 
+        # algorithm periodically. It returns the +Thread+ object.
+        def start_compute_hits_thread
+            Thread.new do
+                interval = @driver.config['update_routing_interval'].to_i
+                while true
+                    sleep(interval)
+                    routing = estimate_hits
+
+                    # Send updated values to the supernodes
+                    ping_msg = Protocol::Ping.new(routing.authority,routing.hub,routing.authority_prime,routing.hub_prime,routing.supernode?)
+                    ping_msg.ctime = DateTime.now
+                    sns = @supernode_table.supernodes
+                    group = ThreadGroup.new
+                    sns.each do |sn|
+                        t = Thread.new(sn) do |sn|
+                            ping(sn.socket,ping_msg) unless sn.socket.nil?
+                        end
+                        group.add(t)
+                    end
+                    group.list.each { |t| t.join }
+                end
+            end
+        end
+
 
         # An iterator over supernodes in the cache. 
         class SupernodeCacheIterator   # :nodoc:

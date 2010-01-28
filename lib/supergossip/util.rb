@@ -3,6 +3,8 @@ require 'supergossip/util/net-ping/ping'
 require 'supergossip/util/net-ping/tcp'
 require 'supergossip/util/log'
 require 'supergossip/util/ip'
+require 'supergossip/util/maxheap'
+require 'supergossip/util/yaml_ext'
 
 class UUID 
     # Add some methods to class +UUID+.

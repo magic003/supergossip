@@ -1,4 +1,4 @@
-module SuperGossip ; module Protocol
+module SuperGossip::Protocol
     # Defines all the message types.
     module MessageType
         PING = 0x00
@@ -17,10 +17,10 @@ module SuperGossip ; module Protocol
     # It is used to exchange profile with supernodes. It contains the basic
     # routing properties of the node
     class Ping < Message
-        attr_accessor :guid, :name, :authority, :hub, :authority_prime, :hub_prime
+        attr_accessor :guid, :name, :authority, :hub, :authority_prime, :hub_prime, :connection_count
         attr_writer :supernode
 
-        def initialize(guid=nil,name=nil,authority=nil,hub=nil,authority_prime=nil,hub_prime=nil,supernode=nil)
+        def initialize
             @type = MessageType::PING
             @guid = guid
             @name = name
@@ -39,9 +39,9 @@ module SuperGossip ; module Protocol
     # It is the response for +Ping+ message. It is the same as +Ping+ except
     # the message type.
     class Pong < Ping
-        def initialize(guid=nil,authority=nil,hub=nil,authority_prime=nil,hub_prime=nil,supernode=nil)
-            super(guid,authority,hub,authority_prime,hub_prime,supernode)
+        def initialize
             @type = MessageType::PONG
+        end
     end
 
     # It represents a request for supernodes.
@@ -55,9 +55,9 @@ module SuperGossip ; module Protocol
 
     # It represents a response for the supernodes request.
     class RespnonseSupernodes < Message
-        attr_accessor :supernodes
+        attr_accessor :num, :supernodes
         def initialize
             @type = MessageType::RESPONSE_SUPERNODES
         end
     end
-end ; end
+end 

@@ -1,10 +1,10 @@
-module SuperGossip ; module Routing
+module SuperGossip::Routing
     include Log
 
     # This is the driver of routing algorithm. 
     class Router
 
-        attr_reader :guid, :config, :routing_dao, :supernode_dao
+        attr_reader :guid, :config, :supernode_dao
 
         def initialize(user_db,routing_db)
             @user_db = user_db
@@ -90,18 +90,34 @@ module SuperGossip ; module Routing
             @message_dao.message_count
         end
 
-        # Get all the neighbors of this node in the social network graph.
+        ################################################
+        # Work with database tables related to routing #
+        ################################################
+
+        # Gets all the neighbors of this node in the social network graph.
         def neighbors
             @neighbor_dao.find_all
         end
 
-        # Update the routing properties.
+        # Gets the routing properties.
+        def routing
+            @routing_dao.find
+        end
+
+        # Updates the routing properties.
         def update_routing
             routing = @routing_dao.find
             yield routing
             @routing_dao.add_or_update(routing)
             routing
         end
+
+        # Saves supernode to cache. Updates it if exists.
+        def save_supernode(sn)
+            @supernode_dao.save_or_update(sn)
+        end
+
+        #############END OF ROUTING DATABASE TABLES####
 
         # Shutdown the routing algorithm. It will stop all the threads.
         def shutdown
@@ -129,6 +145,7 @@ module SuperGossip ; module Routing
         def promote_to_supernode
             # Stop the current algorithm
             @algorithm.stop
+            # TODO advertise supernode
             # TODO start the supernode routing algorithm
         end
 
@@ -159,4 +176,4 @@ module SuperGossip ; module Routing
             end
         end
     end
-end ; end
+end 

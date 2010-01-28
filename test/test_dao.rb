@@ -193,7 +193,7 @@ class TestDAO < Test::Unit::TestCase
         assert_nil supernode
 
         # Test add a new one
-        supernode = Model::Peer.new
+        supernode = Model::Node.new
         supernode.guid = UUID.user_id('supernode').to_s_compact
         supernode.name='supernde'
         supernode.authority = 0.045
@@ -261,14 +261,14 @@ class TestDAO < Test::Unit::TestCase
         assert_nil neighbor
 
         # Test add a new one
-        neighbor = Model::Peer.new
+        neighbor = Model::Node.new
         neighbor.guid = UUID.user_id('neighbor').to_s_compact
         neighbor.name = 'neighbor'
         neighbor.authority = 0.335
         neighbor.hub = 0.011
         neighbor.authority_prime = 12.765
         neighbor.hub_prime = 2.554
-        neighbor.direction = Model::Peer::INOUT
+        neighbor.direction = Model::Node::INOUT
         neighbor.last_update = DateTime.now
         neighbor_dao.add_or_update(neighbor)
         neighbor_return = neighbor_dao.find_by_guid(neighbor.guid)
@@ -282,25 +282,25 @@ class TestDAO < Test::Unit::TestCase
         assert_equal(neighbor,neighbor_return)
 
         # Test find all
-        ngbr1 = Model::Peer.new
+        ngbr1 = Model::Node.new
         ngbr1.guid = UUID.user_id('neighbor1').to_s_compact
         ngbr1.name = 'neighbor1'
         ngbr1.authority = 0.335
         ngbr1.hub = 0.011
         ngbr1.authority_prime = 12.765
         ngbr1.hub_prime = 2.554
-        ngbr1.direction = Model::Peer::IN
+        ngbr1.direction = Model::Node::IN
         ngbr1.last_update = DateTime.now
         neighbor_dao.add_or_update(ngbr1)
 
-        ngbr2 = Model::Peer.new
+        ngbr2 = Model::Node.new
         ngbr2.guid = UUID.user_id('neighbor2').to_s_compact
         ngbr2.name = 'neighbor2'
         ngbr2.authority = 0.335
         ngbr2.hub = 0.011
         ngbr2.authority_prime = 12.765
         ngbr2.hub_prime = 2.554
-        ngbr2.direction = Model::Peer::IN
+        ngbr2.direction = Model::Node::IN
         ngbr2.last_update = DateTime.now
         neighbor_dao.add_or_update(ngbr2)
 

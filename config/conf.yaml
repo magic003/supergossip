@@ -9,9 +9,14 @@
 # database path
 db_path: ~/workspace/supergossip/db/
 
+# Listening port of the server socket for incoming requests
+listening_port: 8964
+
 ######################
 # Routing parameters #
 ######################
+# Number of supernodes fetched from cache each time
+fetched_supernodes_number: 10
 
 # Maximum supernode table of an ordinary node
 max_table_size_on: 6

@@ -12,7 +12,7 @@ module IP
     # variable +RUBY_PLATFORM+. It returns the IP address in human readable
     # string format. Returns +nil+ if failed.
     #
-    # *Currently, it only support Linux and Windows systems.
+    # *Currently, it only support Linux and Windows systems.*
     def self.local_ip
         if RUBY_PLATFORM.downcase.include?('linux')
             output = %x{/sbin/ifconfig}

@@ -4,7 +4,7 @@ module SuperGossip ; module DAO
     # This class provides an interface accessing neighbors in SQLite3 database.
     # A +SQLite3::Database+ object should be provided when initialized.
     # *Although this class performs operations on +neighbor+ table,
-    # it only accepts and returns the object of +Model::Peer+.*
+    # it only accepts and returns the object of +Model::Node+.*
     #
     # Code snippet:
     #
@@ -38,7 +38,7 @@ module SuperGossip ; module DAO
             if result.empty?
                 nil
             else
-                neighbor = Model::Peer.new
+                neighbor = Model::Node.new
                 neighbor.guid = guid
                 result.each do |row|    # should be only one row
                     neighbor.name = row[1]
@@ -58,7 +58,7 @@ module SuperGossip ; module DAO
             sql = "SELECT * FROM neighbor;"
             result = @db.execute(sql)
             neighbors = []
-            neighbor = Model::Peer.new
+            neighbor = Model::Node.new
             result.each do |row|
                 neighbor.guid = row[0]
                 neighbor.name = row[1]
