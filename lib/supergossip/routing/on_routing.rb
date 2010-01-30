@@ -116,9 +116,9 @@ module SuperGossip::Routing
                 sock.close
             end
             # add to supernode cache
-            if result
-                @driver.save_supernode(sock.node)
-            end
+            @driver.save_supernode(sock.node)
+            # add to neighbor cache if it is
+            @driver.save_neighbor(sock.node) if @driver.neighbor?(sock.node.guid)
         end
 
         # Handle +Protocol::RequestSupernodes+ message. 

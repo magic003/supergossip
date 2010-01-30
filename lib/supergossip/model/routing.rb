@@ -1,7 +1,7 @@
 module SuperGossip ; module Model
     # This class holds the basic routing properties for the peer
     class Routing
-        attr_accessor :authority, :hub, :authority_prime, :hub_prime
+        attr_accessor :authority, :hub, :authority_prime, :hub_prime, :last_update
 
         def supernode?
             @is_supernode
@@ -19,8 +19,9 @@ module SuperGossip ; module Model
                 @authority == other.authority && 
                 @hub == other.hub && 
                 @authority_prime == other.authority_prime && 
-                @hub_prime == other.hub_prime
-                @is_supernode == other.supernode?
+                @hub_prime == other.hub_prime &&
+                @is_supernode == other.supernode? &&
+                @last_update === other.last_update
             end
         end
     end

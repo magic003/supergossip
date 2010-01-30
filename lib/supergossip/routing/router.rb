@@ -4,7 +4,7 @@ module SuperGossip::Routing
     # This is the driver of routing algorithm. 
     class Router
 
-        attr_reader :guid, :config, :supernode_dao
+        attr_reader :guid, :config
 
         def initialize(user_db,routing_db)
             @user_db = user_db
@@ -68,16 +68,28 @@ module SuperGossip::Routing
         # if yes, otherwise return +false+.
         def out_link?(guid)
             buddy = @buddy_dao.find_by_guid(guid)
-            false if buddy.nil? or buddy.relationship == Model::Buddy::FOLLOWER
-            true
+            if buddy.nil? or buddy.relationship == Model::Buddy::FOLLOWER
+                false
+            else
+                true
+            end
         end
 
         # Test if the node with +guid+ is a follower(in_link). Return +true+ 
         # if yes, otherwise return +false+.
         def in_link?(guid)
             buddy = @buddy_dao.find_by_guid(guid)
-            false if buddy.nil? or buddy.relationship == Model::Buddy::FOLLOWING
-            true
+            if buddy.nil? or buddy.relationship == Model::Buddy::FOLLOWING
+                false
+            else
+                true
+            end
+        end
+
+        # Test if the node with +guid+ is a neighbor(in_link or out_link).
+        # Returns +true+ if it is.
+        def neighbor?(guid)
+            out_link?(guid) or in_link?(guid)
         end
 
         # Get the following and follower counts of the current node. It returns
@@ -127,6 +139,11 @@ module SuperGossip::Routing
             @supernode_dao.add_or_update(sn)
         end
 
+        # Saves neighbor to caceh. Updates it if exists.
+        def save_neighbor(node)
+            @neighbor_dao.add_or_update(node)
+        end
+
         #############END OF ROUTING DATABASE TABLES####
 
         # Shutdown the routing algorithm. It will stop all the threads.
@@ -143,7 +160,15 @@ module SuperGossip::Routing
             Thread.new do 
                 while true
                     sleep(@config['supernode_watch_interval'])
+                    # update online hours
+                    # TODO better to do this in application layer?
+                    user_dao = DAO::UserDAO.new(@user_db)
+                    user = use_dao.find
+                    user.online_hours += 1
+                    user_dao.add_or_update(user)
+
                     if supernode_capable?
+                        # update the routing properties
                         update_routing do |routing|
                             routing.supernode = true
                         end
@@ -175,6 +200,7 @@ module SuperGossip::Routing
             timeout = config['timeout'].to_i
             @algorithm.timeout = timeout
             @algorithm.bandwidth_manager = @bandwidth_manager
+            # FIXME start will blocked?
             @algorithm.start
 
             # Advertise supernode
@@ -206,6 +232,25 @@ module SuperGossip::Routing
                     return false
                 end
                 return true
+            end
+        end
+
+        # An iterator over supernodes in the cache. 
+        class SupernodeCacheIterator
+            # Initialize the iterator. +Limit+ is the returned items each 
+            # iteration, and +offset+ is how may items to skip at the beginning.
+            def initialize(limit=20,offset=0)
+                @limit = limit
+                @offset = offset
+            end
+            
+            # Return the next +limit+ items start from position +offset+.
+            # Pass the result to block if a block is given. Otherwise, 
+            # return it.
+            def next
+                sns = @supernode_dao.find(limit,offset)
+                offset += limit
+                sns
             end
         end
     end

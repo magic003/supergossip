@@ -179,6 +179,12 @@ module SuperGossip::Routing
             else
                 sock.close unless sock.closed?
             end
+
+            # Updates the local cache for the node
+            if message.supernode?
+                @driver.save_supernode(sock.node)
+            end
+            @driver.save_neighbor(sock.node) if @driver.neighbor?(sock.node.guid)
         end
 
         # Handles +Protocol::Pong+ message.
@@ -195,10 +201,9 @@ module SuperGossip::Routing
                 unless result or sock.closed?
                     sock.close
                 end
-                # add to supernode cache
-                if result
-                    @driver.save_supernode(sock.node)
-                end
+                # save to supernode cache
+                @driver.save_supernode(sock.node)
+                @driver.save_neighbor(sock.node) if @driver.neighbor?(sock.node.guid)
             end
         end
 
@@ -242,9 +247,8 @@ module SuperGossip::Routing
                 sock.close
             end
             # Save to supernode cache
-            if result
-                @driver.save_supernode(sock.node)
-            end
+            @driver.save_supernode(sock.node)
+            @driver.save_neighbor(sock.node) if @driver.neighbor?(sock.node.guid)
 
             # TODO maybe need to forward to neighbors
         end

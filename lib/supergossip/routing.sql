@@ -9,10 +9,9 @@ CREATE TABLE routing (
     hub                 REAL,
     authority_prime     REAL,
     hub_prime           REAL,
-    is_supernode        INTEGER     -- 0 is false, 1 is true
+    is_supernode        INTEGER,     -- 0 is false, 1 is true
+    last_update         TEXT DEFAULT (datetime('now'))
 );
--- insert the default row
-INSERT INTO routing VALUES(1.0,1.0,1.0,1.0,0);
 
 DROP TABLE IF EXISTS supernode_cache;
 CREATE TABLE supernode_cache (

@@ -153,19 +153,17 @@ class TestDAO < Test::Unit::TestCase
 
     # Test +RoutingDAO+ class
     def test_routing_dao
-        # check the default value
         routing_dao = DAO::RoutingDAO.new(@db)
-        routing = routing_dao.find
-        assert !routing.nil?
+=begin
         assert_equal(1.0,routing.authority)
         assert_equal(1.0,routing.hub)
         assert_equal(1.0,routing.authority_prime)
         assert_equal(1.0,routing.hub_prime)
         assert(!routing.supernode?)
-
+=end
         # test add one
-        sql = 'DELETE FROM routing;'
-        @db.execute(sql)
+        #sql = 'DELETE FROM routing;'
+        #@db.execute(sql)
         routing = routing_dao.find
         assert_nil routing
         routing_new = Model::Routing.new
@@ -174,12 +172,14 @@ class TestDAO < Test::Unit::TestCase
         routing_new.authority_prime = 15.567
         routing_new.hub_prime = 3.789
         routing_new.supernode = false
+        routing_new.last_update = DateTime.now
         routing_dao.add_or_update(routing_new)
         routing = routing_dao.find
         assert_equal(routing_new,routing)
 
         # test update one
         routing_new.supernode = true
+        routing_new.last_update = DateTime.now
         routing_dao.add_or_update(routing_new)
         routing = routing_dao.find
         assert_equal(routing_new,routing)

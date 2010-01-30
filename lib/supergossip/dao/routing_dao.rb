@@ -1,4 +1,6 @@
-module SuperGossip ; module DAO
+require 'date'
+
+module SuperGossip; module DAO
     # This class provides an interface accessing routing entry in SQLite3 
     # database. *It should keep that there only one row in the table.*
     # A +SQLite3::Database+ object should be provided when initialized.
@@ -19,11 +21,11 @@ module SuperGossip ; module DAO
             sql = 'SELECT * FROM routing;'
             result = @db.execute(sql)
             if result.empty?    # add new
-                sql = "INSERT INTO routing VALUES(%f,%f,%f,%f,%d);"
+                sql = "INSERT INTO routing VALUES(%f,%f,%f,%f,%d,'%s');"
             else # update existing one
-                sql = "UPDATE routing SET authority=%f, hub=%f, authority_prime=%f, hub_prime=%f, is_supernode=%d;"
+                sql = "UPDATE routing SET authority=%f, hub=%f, authority_prime=%f, hub_prime=%f, is_supernode=%d, last_update='%s';"
             end
-            sql = sql % [routing.authority, routing.hub, routing.authority_prime, routing.hub_prime, if routing.supernode?; 1; else 0; end] 
+            sql = sql % [routing.authority, routing.hub, routing.authority_prime, routing.hub_prime, routing.supernode? ? 1 : 0,routing.last_update.to_s] 
             @db.execute(sql)
         end
 
@@ -41,6 +43,7 @@ module SuperGossip ; module DAO
                     routing.authority_prime = row[2].to_f
                     routing.hub_prime = row[3].to_f
                     routing.supernode = (row[4].to_i != 0)
+                    routing.last_update = DateTime.parse(row[5])
                 end
                 routing
             end

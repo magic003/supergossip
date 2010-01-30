@@ -34,7 +34,7 @@ module SuperGossip::module Routing
         # latency. If no supernodes found, connect to bootstrap nodes.
         def fetch_supernodes
             supernodes = []
-            iter = SupernodeCacheIterator.new(@driver)
+            iter = Router::SupernodeCacheIterator.new
             # Get supernodes from cache. Make sure its size is 10.
             size = @driver.config['fetched_supernodes_number'].to_i || 10
             while supernodes.length < size    
@@ -270,6 +270,7 @@ module SuperGossip::module Routing
                 routing.hub = hub
                 routing.authority_prime = authority_prime
                 routing.hub_prime = hub_prime
+                routing.last_update = DateTime.now
             end
 
             new_routing
@@ -329,7 +330,7 @@ module SuperGossip::module Routing
             end
         end
 
-
+=begin moved to router.rb, just retain for future reference
         # An iterator over supernodes in the cache. 
         class SupernodeCacheIterator   # :nodoc:
             # Initialize the iterator. +Limit+ is the returned items each 
@@ -349,5 +350,6 @@ module SuperGossip::module Routing
                 sns
             end
         end
+=end
     end
 end
