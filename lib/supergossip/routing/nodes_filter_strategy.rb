@@ -1,4 +1,4 @@
-module SuperGossip::Routing
+module SuperGossip ; module Routing
     # It selects a couple of nodes from a collection of them using IP prefix
     # strategy. It compares the prefix of IP address with that of target 
     # socket, and selects a number of most match ones to return.
@@ -63,4 +63,4 @@ module SuperGossip::Routing
             count
         end
     end
-end
+end; end

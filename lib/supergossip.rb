@@ -9,4 +9,5 @@ require 'supergossip/dao/supernode_dao'
 require 'supergossip/dao/neighbor_dao'
 require 'supergossip/model/user'
 require 'supergossip/model/routing'
+require 'supergossip/routing/nodes_filter_strategy'
 
