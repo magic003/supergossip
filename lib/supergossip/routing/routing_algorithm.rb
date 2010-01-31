@@ -7,13 +7,14 @@ class TCPSocket
     attr_accessor :node
 end
 
-module SuperGossip::module Routing
+module SuperGossip::Routing
     # This is the super class for +SNAlgorithm+ and +ONAlgorithm+ that are 
     # used for different types of nodes. It provides some common methods 
     # that used by both nodes. It behaviors like a abstract class so it should 
     # not be initialized directly.
     class RoutingAlgorithm  # :nodoc:
         attr_writer :timeout, :bandwidth_manager
+        private_class_method :new
         
         # Initialization.
         def initialize(driver,supernode_table,protocol)
@@ -26,7 +27,6 @@ module SuperGossip::module Routing
             @running = false    # whether this algorithm is running,
                                 # should be set to true in 'start' method
         end
-        private :new
 
         private
         # Fetch a list of latest supernodes from cache. The size of list 
@@ -34,7 +34,7 @@ module SuperGossip::module Routing
         # latency. If no supernodes found, connect to bootstrap nodes.
         def fetch_supernodes
             supernodes = []
-            iter = Router::SupernodeCacheIterator.new
+            iter = @driver.supernode_cache_iterator
             # Get supernodes from cache. Make sure its size is 10.
             size = @driver.config['fetched_supernodes_number'].to_i || 10
             while supernodes.length < size    
@@ -212,8 +212,8 @@ module SuperGossip::module Routing
         # Estimations            #
         ##########################
 
-        # Estimate the hub score of the node with +guid+, considering its +hub+
-        # value.
+        # Estimate the hub score of the node with +guid+, considering its 
+        # +hub+ value.
         # The estimation formula is:
         #   hub_score = (1 + b/in-degrees + directs_guid/directs_all) * hub
         # If current node has an in-degree from +guid+, +b+ is 1, 0 otherwise.

@@ -1,11 +1,19 @@
-module SuperGossip::Routing
+require 'thread'
+require 'date'
+
+module SuperGossip; module Routing
     include Log
 
-    # This is the driver of routing algorithm. 
+    # This is the driver of routing algorithm. It gets the system 
+    # configurations, creates DAOs for database access and starts the routing
+    # algorithm. If the node is an ordinary node, it starts a thread to 
+    # watch if the node can be promoted to supernode periodically.
     class Router
 
         attr_reader :guid, :config
 
+        # Initializes the DAOs and starts the routing algorithm. If there is
+        # no user in the system, it raises a +NoUserError+.
         def initialize(user_db,routing_db)
             @user_db = user_db
             @routing_db = routing_db
@@ -15,8 +23,7 @@ module SuperGossip::Routing
             user= DAO::UserDAO.new(@user_db).find
             if user.nil?
                 Routing.log {|logger| logger.error(self.class) {"No user found"}}
-                # FIXME: better to raise an exception here
-                return nil
+                raise NoUserError.new("No user found.")
             else 
                 @guid = user.guid
             end
@@ -61,7 +68,9 @@ module SuperGossip::Routing
             timeout = config['timeout'].to_i
             @algorithm.timeout = timeout
             @algorithm.bandwidth_manager = @bandwidth_manager
-            @algorithm.start
+            @algorithm_thread = Thread.new do 
+                @algorithm.start
+            end
         end
 
         # Test if the node with +guid+ is a following(out_link). Return +true+ 
@@ -116,6 +125,11 @@ module SuperGossip::Routing
         # Work with database tables related to routing #
         ################################################
 
+        # Gets a supernode cache iterator.
+        def supernode_cache_iterator(limit=20,offset=0)
+            SupernodeCacheIterator.new(@supernode,limit,offset)
+        end
+
         # Gets all the neighbors of this node in the social network graph.
         def neighbors
             @neighbor_dao.find_all
@@ -150,6 +164,7 @@ module SuperGossip::Routing
         def shutdown
             @supernode_watch_thread.exit
             @algorithm.stop
+            @algorithm_thread.join(3)
         end
 
         private
@@ -200,8 +215,9 @@ module SuperGossip::Routing
             timeout = config['timeout'].to_i
             @algorithm.timeout = timeout
             @algorithm.bandwidth_manager = @bandwidth_manager
-            # FIXME start will blocked?
-            @algorithm.start
+            @algorithm_thread = Thread.new do
+                @algorithm.start
+            end
 
             # Advertise supernode
             Routing.log {|logger| logger.info(self.class) {"Sending supernode advertisement."}}
@@ -239,7 +255,8 @@ module SuperGossip::Routing
         class SupernodeCacheIterator
             # Initialize the iterator. +Limit+ is the returned items each 
             # iteration, and +offset+ is how may items to skip at the beginning.
-            def initialize(limit=20,offset=0)
+            def initialize(supernode_dao,limit,offset)
+                @supernode_dao = supernode_dao
                 @limit = limit
                 @offset = offset
             end
@@ -254,4 +271,4 @@ module SuperGossip::Routing
             end
         end
     end
-end 
+end ; end

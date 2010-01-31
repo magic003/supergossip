@@ -1,4 +1,4 @@
-module SuperGossip::Protocol
+module SuperGossip ; module Protocol
     # Defines all the message types.
     module MessageType
         PING = 0x00
@@ -23,13 +23,6 @@ module SuperGossip::Protocol
 
         def initialize
             @type = MessageType::PING
-            @guid = guid
-            @name = name
-            @authority = authority
-            @hub = hub
-            @authority_prime = authority_prime
-            @hub_prime = hub_prime
-            @supernode = supernode
         end
 
         def supernode?
@@ -69,4 +62,4 @@ module SuperGossip::Protocol
             @type = MessageType::PROMOTION_ADS
         end
     end
-end 
+end ; end

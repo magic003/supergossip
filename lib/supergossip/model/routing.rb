@@ -1,14 +1,10 @@
 module SuperGossip ; module Model
     # This class holds the basic routing properties for the peer
     class Routing
-        attr_accessor :authority, :hub, :authority_prime, :hub_prime, :last_update
+        attr_accessor :authority, :hub, :authority_prime, :hub_prime, :supernode, :last_update
 
         def supernode?
-            @is_supernode
-        end
-
-        def supernode=(is_supernode)
-            @is_supernode = is_supernode
+            @supernode
         end
 
         # Override the == method
@@ -20,7 +16,7 @@ module SuperGossip ; module Model
                 @hub == other.hub && 
                 @authority_prime == other.authority_prime && 
                 @hub_prime == other.hub_prime &&
-                @is_supernode == other.supernode? &&
+                @supernode == other.supernode? &&
                 @last_update === other.last_update
             end
         end
@@ -30,7 +26,6 @@ module SuperGossip ; module Model
     class NodeAddress
         attr_accessor :public_ip, :public_port, :private_ip, :private_port
 
-        # Initialization.
         def initialize(public_ip=nil,public_port=nil,private_ip=nil,private_port=nil)
             @public_ip = public_ip
             @public_port = public_port

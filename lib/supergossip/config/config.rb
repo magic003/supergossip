@@ -7,10 +7,11 @@ module SuperGossip ; module Config
     class Config
         include Singleton
 
-        # Return value by the parameter name. Key should be +String+.
+        # Returns value by the parameter name. Key should be +String+.
         def [](key)
             @configs[key.to_s]
         end
+
         # Load parameters from file.
         # *This method should only be called once.*
         def load(file)

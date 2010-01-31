@@ -1,4 +1,4 @@
-module SuperGossip::Protocol
+module SuperGossip ; module Protocol
     # This represents the response message from the other node. Usually, it is
     # used during the three way handshaking process.
     class Response
@@ -34,4 +34,4 @@ module SuperGossip::Protocol
             res << Protocol::CRLF
         end
     end
-end
+end ; end

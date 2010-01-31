@@ -95,7 +95,7 @@ module SuperGossip::Routing
         # Advertise the node itself to bootstrap nodes and supernodes 
         # currently connecting.
         def advertise
-            # TODO add advertise to bootstrap nodes
+            # TODO send advertisement to bootstrap nodes
             msg = construct_advertisement
             sns = @supernode_table.supernodes
             group = ThreadGroup.new

@@ -19,10 +19,10 @@ class TestDAO < Test::Unit::TestCase
         # Load database
         @db = SQLite3::Database.new(db_path+'/test.db')
         # user
-        sql = IO.read('../lib/supergossip/user.sql')
+        sql = IO.read('../config/sql/user.sql')
         @db.execute_batch(sql)
         # routing
-        sql = IO.read('../lib/supergossip/routing.sql')
+        sql = IO.read('../config/sql/routing.sql')
         @db.execute_batch(sql)
     end
 
@@ -58,7 +58,7 @@ class TestDAO < Test::Unit::TestCase
         user1.name = 'test1'
         user1.password = 'test1passwd'
         user1.guid = UUID.user_id(user1.name).to_s_compact
-        assert_equal(false,userDAO.add_or_update(user1))
+        assert_raise(DAO::TooManyUsersError) {userDAO.add_or_update(user1)}
 
         # find the user
         user_new = userDAO.find

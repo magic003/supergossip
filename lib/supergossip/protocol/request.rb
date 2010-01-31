@@ -1,4 +1,4 @@
-module SuperGossip::Protocol
+module SuperGossip ; module Protocol
     # It represents the connect message sent when initiating the handshaking
     # with the other node.
     class Request
@@ -16,7 +16,7 @@ module SuperGossip::Protocol
             @headers = {}
         end
 
-        # Add header
+        # Adds header
         def add_header(name,val)
             @headers[name] = val
         end
@@ -35,4 +35,4 @@ module SuperGossip::Protocol
             res << Protocol::CRLF
         end
     end
-end
+end ; end

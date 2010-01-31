@@ -1,6 +1,6 @@
 require 'thread'
 
-module SuperGossip::Routing
+module SuperGossip ; module Routing
     # This is the ordinary node table that may be maintained by each 
     # supernode. It consists of the ordinary nodes currently connected to
     # it. If the size exceeds the maximum value, it removes the node with
@@ -87,4 +87,4 @@ module SuperGossip::Routing
             @table.size==0
         end
     end
-end
+end ; end

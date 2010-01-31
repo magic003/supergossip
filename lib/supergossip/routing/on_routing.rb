@@ -2,7 +2,7 @@ require 'thread'
 require 'socket'
 require 'date'
 
-module SuperGossip::Routing
+module SuperGossip; module Routing
     # This implements the routing algorithm for ordinary nodes.
     class ONRouting < RoutingAlgorithm
         # Initialization
@@ -138,4 +138,4 @@ module SuperGossip::Routing
             connect_supernodes(message.supernodes)
         end
     end
-end
+end; end

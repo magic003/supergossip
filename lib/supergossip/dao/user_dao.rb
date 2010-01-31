@@ -15,13 +15,15 @@ module SuperGossip ; module DAO
         end
 
         # Adds a new user or updates an existing one. It guarantees that only
-        # one user exsits in the table.
+        # one user exsits in the table. A +TooManyUsersError+ will be raised
+        # if one user already exists.
         def add_or_update(user)
             # Make sure there is not user available
             sql = "SELECT * FROM user;"
             result = @db.execute(sql)
-            # FIXME should raise an exception?
-            return false unless result.empty? || result[0][0]==user.guid
+            unless result.empty? || result[0][0]==user.guid
+                raise TooManyUsersError.new('Only one user is allowed.')
+            end
 
             if result.empty?    # add a new one
                 sql = "INSERT INTO user(guid,name,password) VALUES('%s','%s','%s');"\
@@ -31,7 +33,6 @@ module SuperGossip ; module DAO
                     % [user.name,user.password,user.online_hours,user.guid]
             end
             @db.execute(sql)
-            true
         end
         
         # Get the unique user in the database. Return +nil+ if not available.
