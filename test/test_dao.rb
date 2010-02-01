@@ -19,10 +19,10 @@ class TestDAO < Test::Unit::TestCase
         # Load database
         @db = SQLite3::Database.new(db_path+'/test.db')
         # user
-        sql = IO.read('../config/sql/user.sql')
+        sql = File.open('../config/sql/user.sql','r') { |f| f.read }
         @db.execute_batch(sql)
         # routing
-        sql = IO.read('../config/sql/routing.sql')
+        sql = File.open('../config/sql/routing.sql','r') { |f| f.read }
         @db.execute_batch(sql)
     end
 
